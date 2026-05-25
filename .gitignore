@@ -1,0 +1,20 @@
+.DS_Store
+**/.DS_Store
+Thumbs.db
+**/Thumbs.db
+
+**/Client_CERTS/
+**/SFTP_CERTS/
+*.keystore
+*.jks
+
+# Sensitive config files
+connections.json
+**/connections.json
+crypto.properties
+**/crypto.properties
+
+# File types to ignore
+*.zip
+*.log
+*.txt

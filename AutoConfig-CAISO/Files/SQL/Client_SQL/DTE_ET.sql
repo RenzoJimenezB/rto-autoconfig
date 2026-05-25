@@ -1,0 +1,1 @@
+UPDATE SASSET_OWNER_CONFIG SET CERTIFICATE = 'pcioffsite itx15906 (caiso_certificate_authority_issuing)', PASSWORD = 'caisoteam', CERT_DETAILS = 'CN=PCIOFFSITE ITx15906,OU=people,O=CAISO,C=US';
