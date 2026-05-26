@@ -4,8 +4,7 @@
  NAME:				Configure_Domain.ps1
  LAST UPDATED:		05/19/2026
 
- AUTHOR:			Rodrigo Mujica
- REVISION:			Renzo Jimenez
+ AUTHOR:			Renzo Jimenez
 
  COMMENT: 
     Market-specific auto configuration script for PCI Cloud domains.
@@ -18,12 +17,14 @@
 ==============================================================================================
 ##>
 
-# Get working path
-function Get-ScriptDirectory {
-    $Invocation = (Get-Variable MyInvocation -Scope 1).Value
-    Split-Path $Invocation.MyCommand.Path
-}
+param(
+    [Parameter(Mandatory = $true)][string]$Market,
+    [Parameter(Mandatory = $true)][string]$Client,
+    [Parameter(Mandatory = $true)][string]$CertDir,
+    [Parameter(Mandatory = $true)][string]$SqlFilePath
+)
 
+# Get working path
 $scriptDir = $PSScriptRoot
 $configLib = Join-Path $scriptDir "Files\cloudConfigLib.ps1"
 
@@ -51,13 +52,13 @@ Write-Host "======================================"
 Write-Host "[NFO] Script initializing, please wait..." -Foregroundcolor Yellow
 
 # Load SQL payloads
-$clientSqlBlock = clientSQL("ERCOT")
-$clientName = $script:ClientName
-$genericSqlBlock = genericSQL("ERCOT")
+$clientSqlBlock = clientSQL -Market $Market -SqlFilePath $SqlFilePath
+$clientName = $Client
+$genericSqlBlock = genericSQL($Market)
 
 # Run initialization 
 initFunc_Common
-initFunc_ERCOT $clientName
+initFunc_ERCOT -clientName $clientName -CertDir $CertDir
 
 # Build environment details for WebLogic scripting
 $envConfig = getEnv

@@ -1,2 +1,0 @@
-UPDATE SASSET_OWNER_CONFIG SET CERTIFICATE = 'pge pci pgeex5796 (caiso_certificate_authority_issuing)', PASSWORD = 'caisoteam', CERT_DETAILS = 'CN=PGE PCI PGEEx5796,OU=people,O=CAISO,C=US';
-UPDATE SCUSTOM_FIELD SET VALUE = 'C:\CAISO\Settlements\SFTP\SFTP_CERTS\CAISO-Settlements\PortGen-TOS\scpgeepcisftp.ppk' WHERE NAME = 'PGEE_CERT';

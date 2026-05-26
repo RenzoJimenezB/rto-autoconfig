@@ -18,7 +18,7 @@ function initFunc_Common {
 }
 
 # Market Load Functions
-function initFunc_SPPIM([string]$clientName) {
+function initFunc_SPPIM([string]$clientName, [string]$CertDir) {
     Set-TimeZone -Name 'Central Standard Time'
     Write-Host "The server timezone is now being set to CST"
 	
@@ -45,7 +45,7 @@ function initFunc_SPPIM([string]$clientName) {
     }
 
     Copy-Item (Join-Path $scriptDir "Files\sppim_2017.jks") C:\PCI\certificates\sppim_2017.jks
-    Copy-Item (Join-Path $scriptDir "Files\Client_CERTS\$clientName\*") C:\PCI\certificates -Recurse -Force
+    Copy-Item "$CertDir\*" C:\PCI\certificates -Recurse -Force
 }
 
 # Weblogic Functions 
@@ -260,7 +260,7 @@ function buildjdbc {
 }
 
 function genericSQL($market) {
-    $genericSQLPath = Join-Path $scriptDir "Files\SQL\genericSQL_$market.sql"
+    $genericSQLPath = Join-Path $scriptDir "Files\genericSQL_$market.sql"
     if (!(Test-Path $genericSQLPath)) {
         Write-Host "[ERR] Missing generic SQL file: $genericSQLPath" -ForegroundColor Red
         exit 1
@@ -268,25 +268,14 @@ function genericSQL($market) {
     return (Get-Content -Path $genericSQLPath -Raw)
 }
 
-function clientSQL($market) {
-    $clientSQLFolder = Join-Path $scriptDir "Files\SQL\Client_SQL"
-    if (!(Test-Path $clientSQLFolder)) {
-        Write-Host "[ERR] Missing Client_SQL folder: $clientSQLFolder" -Foregroundcolor Red
+function clientSQL([string]$Market, [string]$SqlFilePath) {
+    if (-not (Test-Path $SqlFilePath)) {
+        Write-Host "[ERR] Client SQL file not found: $SqlFilePath" -Foregroundcolor Red
         exit 1
     }
 
-    $payloadlist = @(Get-ChildItem $clientSQLFolder -Filter *.sql 
-        | Out-GridView -Title "Choose the $market client SQL file" -PassThru)
-
-    if (!$payloadlist) {
-        Write-Host "[ERR] No SQL file selected." -ForegroundColor Red
-        exit 1
-    }
-    
-    $script:ClientName = $payloadlist.BaseName
-    Write-Host "[NFO] Selected client: $script:ClientName" -ForegroundColor Yellow
-
-    $sql = Get-Content -Path $payloadlist.FullName -Raw
+    Write-Host "[NFO] Using client SQL: $(Split-Path $SqlFilePath -Leaf)" -ForegroundColor Yellow
+    $sql = Get-Content -Path $SqlFilePath -Raw
     return @"
 BEGIN	
 $sql
