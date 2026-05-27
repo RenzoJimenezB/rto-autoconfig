@@ -39,7 +39,7 @@ if (-not (Test-Path $configLib)) {
 Clear-Host
 
 # Get domain name
-$domains = Get-ChildItem -Path C:\PCI\domain -Directory | Select-Object -ExpandProperty Name
+$domains = @(Get-ChildItem -Path C:\PCI\domain -Directory | Select-Object -ExpandProperty Name)
 
 if ($domains.Count -gt 1) {
     Write-Host "[WRN] Multiple domains found. $($domains[0]) selected" -ForegroundColor Yellow
@@ -120,4 +120,5 @@ catch {
 finally {
     if ($conn -and $conn.State -eq 'Open') { $conn.Close() }
 }
-Write-Host "======================================" 
+Write-Host "======================================"
+exit 0

@@ -19,49 +19,47 @@ function initFunc_Common {
 
 # Market Load Function
 function initFunc_CAISO([string]$clientName, [string]$CertDir) {
-    Write-Host
-    Write-Host "CST Clients:"
-    Write-Host "    Shell"
-    Write-Host "    RWE"
-    Write-Host
-    Write-Host "MST Clients:"
-    Write-Host "    APS"
-    Write-Host "    PNM"
-    Write-Host "    SRP"
-    Write-Host "    UMPA"
-    Write-Host
-    Write-Host "PST Clients:"
-    Write-Host "    Anaheim (APU)"
-    Write-Host "    Avista"
-    Write-Host "    BPA"
-    Write-Host "    CDWR"
-    Write-Host "    DTE"
-    Write-Host "    IID"
-    Write-Host "    LADWP"
-    Write-Host "    NVE"
-    Write-Host "    PacGas"
-    Write-Host "    PacifiCorp"
-    Write-Host "    PortGen"
-    Write-Host "    PSE"
-    Write-Host "    SDCP"
-    Write-Host "    SDGE"
-    Write-Host "    SMUD"
-    Write-Host "    TPU (Tacoma)"
-    Write-Host "    TID"
-    Write-Host "    Xcel"
-    Write-Host
-    do {
-        $timezoneabbv = (Read-Host -Prompt 'What time zone is the client in: CST, MST, or PST?').ToUpper()
-        Write-Host
-        $timezone = if ($timezoneabbv -eq 'CST') { 'Central Standard Time' }
-        elseif ($timezoneabbv -eq 'MST') { 'US Mountain Standard Time' }
-        elseif ($timezoneabbv -eq 'PST') { 'Pacific Standard Time' }
-    } until (
-        $timezoneabbv -eq 'CST' -or 
-        $timezoneabbv -eq 'MST' -or 
-        $timezoneabbv -eq 'PST')
+    $clientTimezones = @{
+        'Shell'      = 'CST'
+        'RWE'        = 'CST'
+        'APS'        = 'MST'
+        'PNM'        = 'MST'
+        'SRP'        = 'MST'
+        'UMPA'       = 'MST'
+        'APU'        = 'PST'
+        'Avista'     = 'PST'
+        'BPA'        = 'PST'
+        'CDWR'       = 'PST'
+        'DTE'        = 'PST'
+        'IID'        = 'PST'
+        'LADWP'      = 'PST'
+        'NVE'        = 'PST'
+        'PacGas'     = 'PST'
+        'PacifiCorp' = 'PST'
+        'PortGen'    = 'PST'
+        'PSE'        = 'PST'
+        'SDCP'       = 'PST'
+        'SDGE'       = 'PST'
+        'SMUD'       = 'PST'
+        'TPU'        = 'PST'
+        'TID'        = 'PST'
+        'Xcel'       = 'PST'
+    }
 
-    Set-TimeZone -Name "$timezone"
+    $timezoneMap = @{
+        'CST' = 'Central Standard Time'
+        'MST' = 'US Mountain Standard Time'
+        'PST' = 'Pacific Standard Time'
+    }
+
+    $timezoneabbv = $clientTimezones[$clientName]
+
+    if (-not $timezoneabbv) {
+        throw "Unknown client '$clientName'. Please add them to the client timezone lookup table."
+    }
+
+    $timezone = $timezoneMap[$timezoneabbv]
+    Set-TimeZone -Name $timezone
     Write-Host "Server timezone set to $timezoneabbv"
 
     $folders = @(
@@ -93,8 +91,8 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir) {
     Copy-Item (Join-Path $scriptDir "Files\CAISOEIM.keystore") C:\CAISO\CAISOEIM.keystore
     Copy-Item (Join-Path $scriptDir "Files\CAISOEIM.txt") C:\CAISO\CAISOEIM.txt
 
-    Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI-Updates\GM\custom\$clientName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
-    Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI\domain\$clientName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
+    Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI-Updates\GM\custom\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
+    Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI\domain\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
     
     Copy-Item "$CertDir\*" C:\CAISO\Settlements\SFTP -Recurse -Force
 }
