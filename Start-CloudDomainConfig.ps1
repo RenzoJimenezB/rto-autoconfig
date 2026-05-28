@@ -412,23 +412,25 @@ try {
     Write-Info "SQL file  : $VM_TEMP_DIR\$client.sql" 
     Write-Host ''
 
-    $result = Invoke-Command -Session $session -ScriptBlock {
+    Write-Host '=============================================' -ForegroundColor DarkCyan
+
+    Invoke-Command -Session $session -ScriptBlock {
         param($scriptPath, $market, $client, $certDir, $sqlFilePath)
 
         & $scriptPath -Market      $market `
             -Client      $client `
             -CertDir     $certDir `
-            -SqlFilePath $sqlFilePath | Out-Null
+            -SqlFilePath $sqlFilePath
 
-        return $LASTEXITCODE
     } -ArgumentList $mainScript, $market, $client, "$VM_TEMP_DIR\Certs", "$VM_TEMP_DIR\$client.sql"
 
-
-    if ($result -eq 0 -or $null -eq $result) {
+    if ($?) {
+        Write-Host ''
+        Write-Host '=============================================' -ForegroundColor DarkCyan
         Write-Success "Configure_Domain.ps1 completed successfully"
     }
     else {
-        Write-Fail "Configure_Domain.ps1 finished with exit code: $result"
+        Write-Fail "Configure_Domain.ps1 finished with errors"
         Write-Warn "Review logs on the VM for details."
     }
 }
