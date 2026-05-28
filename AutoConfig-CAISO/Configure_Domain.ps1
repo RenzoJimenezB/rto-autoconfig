@@ -25,13 +25,28 @@ param(
     [Parameter(Mandatory = $true)][string]$SqlFilePath
 )
 
+function Write-Step {
+    param([string]$Message)
+    Write-Host "`n[ $(Get-Date -Format 'HH:mm:ss') ] $Message" -ForegroundColor Cyan
+}
+
+function Write-Success {
+    param([string]$Message)
+    Write-Host "  OK  $Message" -ForegroundColor Green
+}
+
+function Write-Fail {
+    param([string]$Message)
+    Write-Host "  !!  $Message" -ForegroundColor Red
+}
+
 # Get working path
 $scriptDir = $PSScriptRoot
 $configLib = Join-Path $scriptDir "Files\cloudConfigLib.ps1"
 
 # Load cloudConfigLib.ps1
 if (-not (Test-Path $configLib)) {
-    Write-Host "[ERR] Cannot find cloudConfigLib.ps1" -ForegroundColor Red
+    Write-Fail "Cannot find cloudConfigLib.ps1"
     exit 1
 }
 . $configLib
@@ -47,10 +62,12 @@ $domainName = $domains[0]
 # Set service name
 $gsmsSvc = "PCI_GM_" + $domainName
 
-Write-Host "======================================" 
-Write-Host "[NFO] Script initializing, please wait..." -Foregroundcolor Yellow
+Write-Host '=============================================' -ForegroundColor DarkCyan
+
+Write-Step 'Script initializing, please wait...'
 
 # Load SQL payloads
+Write-Information "Using client SQL: $Client.sql"
 $clientSqlBlock = clientSQL -Market $Market -SqlFilePath $SqlFilePath
 $clientName = $Client
 $genericSqlBlock = genericSQL($Market)
@@ -60,15 +77,16 @@ initFunc_Common
 initFunc_CAISO -clientName $clientName -CertDir $CertDir
 
 # Build environment details for WebLogic scripting
+Write-Step 'Configuring server environment'
 $envConfig = getEnv
-
 $domainDir = $envConfig.DomainDir
 $jdkBinPath = $envConfig.JdkBinPath
 $wlServerBinPath = $envConfig.ServerBinPath
 
-# Set up Oracle, WebLogic environment, SLL and mail block
 loadOracle
 setWLEnv $wlServerBinPath
+
+Write-Step 'Setting WL environment'
 
 $jdbcConfig = buildJDBC
 $jdbc = $jdbcConfig.JDBC
@@ -77,46 +95,47 @@ $dbPW = 'pci'
 
 # WebLogic config file
 $file = Join-Path $domainDir "config\config.xml"
-
-# Set the precanned JKS file 
 $jksFile = "C:\PCI\trust\$domainName\${domainName}_GM_truststore.jks"
 
+Write-Step 'Modifying WebLogic config.xml'
 $encrypted_password = wl_encrypt_pw $jdkBinPath "#code4quality"
 wl_config_modify $file $jksFile $encrypted_password
 
 # Connect to DB and execute SQL
+Write-Step 'Connecting to database'
 try {
     $constr = "User Id=$user;Password=$dbPW;Data Source=$jdbc"
-    Write-Host "[NFO] Attempting to connect to DB... " -Foregroundcolor Yellow
 
     $conn = New-Object Oracle.ManagedDataAccess.Client.OracleConnection($constr)
     $conn.Open()
-    Write-Host "[SUC] Connected to DB successfully!" -Foregroundcolor Green
-    Write-Host "[NFO] Executing SQL scripts..." -Foregroundcolor Yellow
+    Write-Success 'Connected to DB successfully!'
 
+    Write-Step 'Executing SQL scripts'
+    
     try {
         (New-Object Oracle.ManagedDataAccess.Client.OracleCommand($genericSqlBlock, $conn)).ExecuteNonQuery() | Out-Null
-        Write-Host "[SUC] Generic Market SQL executed successfully" -ForegroundColor Green
+        Write-Success 'Generic Market SQL executed successfully'
     }
     catch { throw "Generic Market SQL failed: $($_.Exception.Message)" }
 
     try {
         (New-Object Oracle.ManagedDataAccess.Client.OracleCommand($clientSqlBlock, $conn)).ExecuteNonQuery() | Out-Null
-        Write-Host "[SUC] Client SQL executed successfully" -ForegroundColor Green
+        Write-Success 'Client SQL executed successfully'
     }
     catch { throw "Client SQL failed: $($_.Exception.Message)" }
 
-    Write-Host "[NFO] Restarting GSMS service..." -Foregroundcolor Yellow
+    Write-Step "Restarting GSMS service"
     Stop-Service $gsmsSvc
     Start-Service $gsmsSvc
-    Write-Host "[SUC] Script completed" -Foregroundcolor Green
+    Write-Success 'Script completed'
 }
 catch {
-    Write-Host "[ERR] $($_.Exception.Message)" -ForegroundColor Red
+    Write-Fail $_.Exception.Message
     exit 1
 }
 finally {
     if ($conn -and $conn.State -eq 'Open') { $conn.Close() }
 }
-Write-Host "======================================"
+
+Write-Host '=============================================' -ForegroundColor DarkCyan
 exit 0

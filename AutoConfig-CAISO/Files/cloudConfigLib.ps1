@@ -175,7 +175,6 @@ function getEnv {
 }
 
 function setWLEnv([string]$wlServerBinPath) {
-    Write-Host "[NFO] Setting WL environment..." -Foregroundcolor Yellow
     & "$wlServerBinPath\setWLSEnv.cmd" | Out-Null
 }
 
