@@ -125,7 +125,7 @@ function loadOracle {
         [System.IO.Compression.ZipFile]::ExtractToDirectory($odpZip, $odpTarget)
         #verify extraction: 
         if (!(test-path -type leaf 'C:\Oracle_ODP_Install\install_odpm.bat')) {
-            Write-Host "[ERR] Extract failed! Check drive space and permissions" -Foregroundcolor Red
+            Write-Fail "ODP extraction failed. Check drive space and permissions"
             exit 1 
         }
     }
@@ -133,18 +133,17 @@ function loadOracle {
     # Verify previous run of install.bat
     if (!(test-path 'C:\oracle\odp.net\')) {
         if (!(test-path -type leaf $ora12local)) {
-            Write-Host "[WRN] ODP assembly not found. Attempting to install ODP managed drivers" -Foregroundcolor Yellow
+            Write-Warn "ODP assembly not found. Attempting to install ODP managed drivers"
             &cmd /c "cd $odpInstall && $odpInstallbat $odpInstallParam1 $odpInstallParam2 $odpInstallParam3"
         }
     }
 	
     if (test-path -type leaf $ora12local) {
         Add-Type -Path $ora12local
-        $assemblyFile = $ora12local
-        return $assemblyFile			
+        Write-Info "ODP assembly loaded: $ora12local"		
     }
     else {
-        Write-Host "[ERR] Cannot find $ora12local to load. Exiting."  -Foregroundcolor Red
+        Write-Fail "Cannot find $ora12local to load"
         exit 1
     }
 }
@@ -257,7 +256,6 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
     }
 	
     if (!($xml.domain['mail-session'])) {	
-        Write-Host "[NFO] Attempting to add mail block" -Foregroundcolor Yellow
         $xmlMail = $xml.CreateElement("mail-session", "http://xmlns.oracle.com/weblogic/domain");
         $deploy = $xml.domain.InsertAfter($xmlMail, $xml.domain.jmx)
         $newXmlNameElement = $xmlMail.AppendChild($xml.CreateElement("name", "http://xmlns.oracle.com/weblogic/domain"));
@@ -312,18 +310,18 @@ function buildjdbc {
     }
 }
 
-function genericSQL($market) {
+function genericSQL([string]$Market) {
     $genericSQLPath = Join-Path $scriptDir "Files\genericSQL_$market.sql"
     if (!(Test-Path $genericSQLPath)) {
-        Write-Host "[ERR] Missing generic SQL file: $genericSQLPath" -ForegroundColor Red
+        Write-Fail "Missing generic SQL file: $genericSQLPath"
         exit 1
     }
     return (Get-Content -Path $genericSQLPath -Raw)
 }
 
-function clientSQL([string]$Market, [string]$SqlFilePath) {
+function clientSQL([string]$SqlFilePath) {
     if (-not (Test-Path $SqlFilePath)) {
-        Write-Host "[ERR] Client SQL file not found: $SqlFilePath" -Foregroundcolor Red
+        Write-Fail "Client SQL file not found: $SqlFilePath"
         exit 1
     }
     $sql = Get-Content -Path $SqlFilePath -Raw

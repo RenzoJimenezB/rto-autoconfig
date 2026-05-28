@@ -27,29 +27,28 @@ param(
 
 function Write-Step {
     param([string]$Message)
-    Write-Host "`n[ $(Get-Date -Format 'HH:mm:ss') ] $Message" -ForegroundColor Cyan
+    Write-Output "`n[ $(Get-Date -Format 'HH:mm:ss') ] $Message"
 }
 
 function Write-Success {
     param([string]$Message)
-    Write-Host "  OK  $Message" -ForegroundColor Green
+    Write-Output "  OK  $Message"
 }
 
 function Write-Fail {
     param([string]$Message)
-    Write-Host "  !!  $Message" -ForegroundColor Red
-}
-
-function Write-Info { 
-    param([string]$m) 
-    Write-Host "  $m" -ForegroundColor DarkGray 
+    Write-Output "  !!  $Message"
 }
 
 function Write-Warn { 
     param([string]$m) 
-    Write-Host "  $m" -ForegroundColor Yellow 
+    Write-Output "  $m" 
 }
 
+function Write-Info { 
+    param([string]$m) 
+    Write-Output "  $m" 
+}
 
 # Get working path
 $scriptDir = $PSScriptRoot
@@ -73,19 +72,17 @@ $domainName = $domains[0]
 # Set service name
 $gsmsSvc = "PCI_GM_" + $domainName
 
-Write-Host '=============================================' -ForegroundColor DarkCyan
-
 Write-Step 'Script initializing, please wait...'
 
 # Load SQL payloads
 Write-Info "Using client SQL: $Client.sql"
-$clientSqlBlock = clientSQL -Market $Market -SqlFilePath $SqlFilePath
+$clientSqlBlock = clientSQL $SqlFilePath
 $clientName = $Client
-$genericSqlBlock = genericSQL($Market)
+$genericSqlBlock = genericSQL $Market
 
 # Run initialization 
 initFunc_Common
-initFunc_CAISO -clientName $clientName -CertDir $CertDir
+initFunc_CAISO $clientName $CertDir
 
 # Build environment details for WebLogic scripting
 Write-Step 'Configuring server environment'
@@ -148,5 +145,4 @@ finally {
     if ($conn -and $conn.State -eq 'Open') { $conn.Close() }
 }
 
-Write-Host '=============================================' -ForegroundColor DarkCyan
 exit 0
