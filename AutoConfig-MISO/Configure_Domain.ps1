@@ -35,8 +35,6 @@ if (-not (Test-Path $configLib)) {
 }
 . $configLib
 
-Clear-Host
-
 # Get domain name
 $domains = Get-ChildItem -Path C:\PCI\domain -Directory | Select-Object -ExpandProperty Name
 
