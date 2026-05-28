@@ -1,4 +1,6 @@
-# Common Init Functions
+# ─────────────────────────────────────────────
+#  Common Init
+# ─────────────────────────────────────────────
 function initFunc_Common {
     New-Item -Path C:\PCI\trust\$domainName -ItemType Directory -Force | Out-Null
     New-Item -Path C:\PCI-Updates\GM\custom\$domainName\applications\GenPortal.ear\APP-INF\classes -ItemType Directory -Force | Out-Null
@@ -17,7 +19,9 @@ function initFunc_Common {
     Copy-Item $connectionsJsonPath "C:\Users\Administrator\AppData\Roaming\SQL Developer\$($cnct.Name)\o.jdeveloper.db.connection\connections.json"
 }
 
-# Market Load Function
+# ─────────────────────────────────────────────
+#  Market Init — CAISO
+# ─────────────────────────────────────────────
 function initFunc_CAISO([string]$clientName, [string]$CertDir) {
     $clientTimezones = @{
         'Shell'      = 'CST'
@@ -60,7 +64,7 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir) {
 
     $timezone = $timezoneMap[$timezoneabbv]
     Set-TimeZone -Name $timezone
-    Write-Host "Server timezone set to $timezoneabbv"
+    Write-Info "Server timezone set to $timezoneabbv"
 
     $folders = @(
         "C:\CAISO\Archive",
@@ -97,7 +101,9 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir) {
     Copy-Item "$CertDir\*" C:\CAISO\Settlements\SFTP -Recurse -Force
 }
 
-# Weblogic Functions 
+# ─────────────────────────────────────────────
+#  WebLogic — Load Oracle ODP
+# ───────────────────────────────────────────── 
 function loadOracle {
     # Load Function Library & Assembly files: 										   
     Param([Parameter(Mandatory = $false)][switch]$wlpwd)
@@ -124,7 +130,7 @@ function loadOracle {
         }
     }
 	
-    #verify previous run of install.bat
+    # Verify previous run of install.bat
     if (!(test-path 'C:\oracle\odp.net\')) {
         if (!(test-path -type leaf $ora12local)) {
             Write-Host "[WRN] ODP assembly not found. Attempting to install ODP managed drivers" -Foregroundcolor Yellow
@@ -143,8 +149,10 @@ function loadOracle {
     }
 }
 
+# ─────────────────────────────────────────────
+#  WebLogic — Environment
+# ─────────────────────────────────────────────
 function getEnv {
-    #Get domain path, get WL path. Start setting variables like what the wlsetENV.bat file does... 
     $imagePath = (Get-ItemProperty HKLM:\SYSTEM\CurrentControlSet\services\PCI_GM_$domainName | Select-Object -ExpandProperty ImagePath)
     $serverBinPath = Split-Path $imagePath
     $serverPath = $imagePath -replace "\\server\\bin\\wlsvcX64.exe", ""
@@ -189,20 +197,20 @@ function wl_encrypt_pw ([string]$javaPath, [string]$encryptme) {
     return $encryptedPW
 }
 
+# ─────────────────────────────────────────────
+#  WebLogic — config.xml SSL + Mail
+# ─────────────────────────────────────────────
 function wl_config_modify($file, $jksFile, $enc_pw) {
     if (!(($file) -or ($jksFile) -or ($enc_pw))) {
-        Write-Host "[ERR] Missing a SSL input. Exiting." -Foregroundcolor Red
-        exit
+        Write-Fail "Missing a SSL input."
+        exit 1
     }
 
-    Write-Host "[NFO] Modifying Weblogic config.xml" -Foregroundcolor Yellow
-    Write-Host 
     $saveit = 0
     $xml = [xml](Get-Content $file)
     $encrypter_value = $enc_pw 
 	
     if (!(($xml.domain.server.ssl.enabled.ToString()) -eq 'true')) {	
-        Write-Host "[NFO] Attempting to add SSL block" -Foregroundcolor Yellow
         $xml.domain.server.ssl.enabled = 'true'
 	
         $newNode1 = $xml.CreateElement("listen-port", "http://xmlns.oracle.com/weblogic/domain")
@@ -242,12 +250,10 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
         $deploy = $xml.domain.server.InsertAfter($newNode9, $xml.domain.server['custom-trust-key-store-type'])
 
         $saveit = 1
-        Write-Host "[SUC] Modified SSL block in Weblogic config.xml" -Foregroundcolor Green
-        Write-Host 
+        Write-Success "SSL block added to config.xml"
     }
     else {
-        Write-Host "[NFO] SSL already in Weblogic config.xml" -Foregroundcolor Yellow
-        Write-Host 
+        Write-Info "SSL already in WebLogic config.xml"
     }
 	
     if (!($xml.domain['mail-session'])) {	
@@ -263,16 +269,14 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
         $xml.domain.'mail-session'.'jndi-name' = 'GPMailSession'
         $xml.domain.'mail-session'.properties = "debug=true;mail.transport.protocol=SMTP;mail.user=PCI_Support;mail.host=365mail.powercosts.com;mail.store.protocol=POP3";
         $saveit = 1
-        Write-Host "[SUC] Modified mail block in Weblogic config.xml" -Foregroundcolor Green	
-        Write-Host 
+        Write-Success "Mail block added to config.xml"
     }
     else {
-        Write-Host "[NFO] Mail block already in Weblogic config.xml" -Foregroundcolor Yellow
-        Write-Host 
+        Write-Info "Mail block already in Weblogic config.xml"
     }
 	
     if ($saveit -ne 0) { 
-        Write-Host "[NFO] Backing up existing weblogic config.xml" -Foregroundcolor Yellow
+        Write-Info "Backing up existing weblogic config.xml"
         $dateTime = (get-date).ToString("yyyy-MM-dd_HHmm")
         $fileBackup = Join-Path (Split-Path $file) "config.xml.bakup_$dateTime"
         Copy-Item $file $fileBackup
@@ -287,12 +291,13 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
         $v = get-content $file -raw
         (($v -replace '\s{4}[<]plan-staging-mode xsi:nil="true"[>\r\n]\s+[<][/]plan-staging-mode[>]', '    <plan-staging-mode xsi:nil="true"></plan-staging-mode>')) | set-content -Path $file
 	
-        Write-Host "[SUC] Weblogic config.xml modified" -Foregroundcolor Green
-        Write-Host 		
+        Write-Success "Weblogic config.xml modified"
     }
 }
 
-# SQL Functions 
+# ─────────────────────────────────────────────
+#  SQL Helpers
+# ─────────────────────────────────────────────
 function buildjdbc {
     #Build JDBC Connect String: 
     $jdbc = (get-content $env:APPHOME\config\jdbc\GTDW-8080-jdbc.xml | 
@@ -321,8 +326,6 @@ function clientSQL([string]$Market, [string]$SqlFilePath) {
         Write-Host "[ERR] Client SQL file not found: $SqlFilePath" -Foregroundcolor Red
         exit 1
     }
-
-    Write-Host "[NFO] Using client SQL: $(Split-Path $SqlFilePath -Leaf)" -ForegroundColor Yellow
     $sql = Get-Content -Path $SqlFilePath -Raw
     return @"
 BEGIN	

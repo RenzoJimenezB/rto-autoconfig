@@ -40,6 +40,17 @@ function Write-Fail {
     Write-Host "  !!  $Message" -ForegroundColor Red
 }
 
+function Write-Info { 
+    param([string]$m) 
+    Write-Host "  $m" -ForegroundColor DarkGray 
+}
+
+function Write-Warn { 
+    param([string]$m) 
+    Write-Host "  $m" -ForegroundColor Yellow 
+}
+
+
 # Get working path
 $scriptDir = $PSScriptRoot
 $configLib = Join-Path $scriptDir "Files\cloudConfigLib.ps1"
@@ -55,7 +66,7 @@ if (-not (Test-Path $configLib)) {
 $domains = @(Get-ChildItem -Path C:\PCI\domain -Directory | Select-Object -ExpandProperty Name)
 
 if ($domains.Count -gt 1) {
-    Write-Host "[WRN] Multiple domains found. $($domains[0]) selected" -ForegroundColor Yellow
+    Write-Warn "Multiple domains found. $($domains[0]) selected"
 }
 $domainName = $domains[0]
 
@@ -67,7 +78,7 @@ Write-Host '=============================================' -ForegroundColor Dark
 Write-Step 'Script initializing, please wait...'
 
 # Load SQL payloads
-Write-Information "Using client SQL: $Client.sql"
+Write-Info "Using client SQL: $Client.sql"
 $clientSqlBlock = clientSQL -Market $Market -SqlFilePath $SqlFilePath
 $clientName = $Client
 $genericSqlBlock = genericSQL($Market)

@@ -82,12 +82,22 @@ function Write-Fail {
     Write-Host "  !!  $Message" -ForegroundColor Red
 }
 
+function Write-Info { 
+    param([string]$m) 
+    Write-Host "  $m" -ForegroundColor DarkGray 
+}
+
+function Write-Warn { 
+    param([string]$m) 
+    Write-Host "  $m" -ForegroundColor Yellow 
+}
+
 function Prompt-NotEmpty {
     param([string]$Label)
     do {
         $value = Read-Host $Label
         $value = $value.Trim()
-        if (-not $value) { Write-Host "  Value cannot be empty. Please try again." -ForegroundColor Yellow }
+        if (-not $value) { Write-Warn "Value cannot be empty. Please try again." }
     } while (-not $value)
     return $value
 }
@@ -110,19 +120,19 @@ Write-Step 'Collecting configuration inputs'
 
 # VM name — injected from app or prompted if running standalone
 if (-not $runningFromApp) {
-    $vmRaw = Prompt-NotEmpty 'Enter VM name (e.g. RTO-QA-RWE-TEST)'
+    $vmRaw = Prompt-NotEmpty '  Enter VM name (e.g. RTO-QA-RWE-TEST)'
     $vmHost = ($vmRaw.Trim().ToLower()) + $VM_DOMAIN_SUFFIX
 }
-Write-Host "  Target VM FQDN: $vmHost" -ForegroundColor Gray
+Write-Info "Target VM FQDN: $vmHost"
 
 # Valid markets and input validation
 $validMarkets = @('CAISO', 'ERCOT', 'ISONE', 'MISO', 'NYISO', 'PJM', 'SPPIM')
 
 if (-not $runningFromApp) {
     do {
-        $market = (Prompt-NotEmpty 'Enter Market name (CAISO, ERCOT, ISONE, MISO, NYISO, PJM, SPPIM)').Trim().ToUpper()
+        $market = (Prompt-NotEmpty '  Enter Market name (CAISO, ERCOT, ISONE, MISO, NYISO, PJM, SPPIM)').Trim().ToUpper()
         if ($market -notin $validMarkets) {
-            Write-Warning "Invalid market '$market'. Please enter one of: $($validMarkets -join ', ')"
+            Write-Warn "Invalid market '$market'. Please enter one of: $($validMarkets -join ', ')"
         }
     } while ($market -notin $validMarkets)
 }
@@ -149,7 +159,7 @@ function Find-ClientMatches {
 if (-not $runningFromApp) {
     $client = $null
     do {
-        $raw = (Prompt-NotEmpty 'Enter Client name (e.g. PAC, PSE-MT, NVE-MT)').Trim()
+        $raw = (Prompt-NotEmpty '  Enter Client name (e.g. PAC, PSE-MT, NVE-MT)').Trim()
         $upper = $raw.ToUpper()
 
         $exactMatch = $validClients | Where-Object { $_.ToUpper() -eq $upper }
@@ -161,16 +171,16 @@ if (-not $runningFromApp) {
         $clientMatches = @(Find-ClientMatches -RawEntry $raw -ClientList $validClients)
 
         if ($clientMatches.Count -eq 1) {
-            $confirm = Prompt-NotEmpty "Did you mean '$($clientMatches[0])'? (Y/N)"
+            $confirm = Prompt-NotEmpty "  Did you mean '$($clientMatches[0])'? (Y/N)"
             if ($confirm.Trim().ToUpper() -eq 'Y') {
                 $client = $clientMatches[0]
             }
             else {
-                Write-Warning "No client selected. Please try again."
+                Write-Warn "No client selected. Please try again."
             }
         }
         elseif ($clientMatches.Count -gt 1) {
-            Write-Host "Did you mean one of these?" -ForegroundColor Cyan
+            Write-Host "  Did you mean one of these?" -ForegroundColor Cyan
             $i = 1
             foreach ($m in $clientMatches) { Write-Host "  [$i] $m"; $i++ }
             Write-Host "  [0] None of these"
@@ -180,16 +190,16 @@ if (-not $runningFromApp) {
                 $client = $clientMatches[$idx]
             }
             else {
-                Write-Warning "No client selected. Please try again."
+                Write-Warn "No client selected. Please try again."
             }
         }
         else {
-            Write-Warning "No matches found for '$raw'. Please check the name and try again."
+            Write-Warn "No matches found for '$raw'. Please check the name and try again."
         }
 
     } while (-not $client)
 }
-Write-Host "Client set to: $client" -ForegroundColor Green
+Write-Info "Client set to: $client"
 
 # Derive paths
 $certSourcePath = Join-Path $NAS3_CERTS_ROOT "$certFolder\$client"
@@ -197,11 +207,11 @@ $autoConfigZip = Join-Path $NAS3_AUTOCONFIG  "AutoConfig-$market.zip"
 $sqlSourcePath = Join-Path $NAS3_SQL_ROOT "$market\$client.sql"
 
 Write-Host ''
-Write-Host '  Summary:' -ForegroundColor DarkGray
-Write-Host "    VM FQDN    : $vmHost"          -ForegroundColor DarkGray
-Write-Host "    Cert source: $certSourcePath"   -ForegroundColor DarkGray
-Write-Host "    AutoConfig : $autoConfigZip"    -ForegroundColor DarkGray
-Write-Host "    SQL file   : $sqlSourcePath"    -ForegroundColor DarkGray
+Write-Info 'Summary:'
+Write-Info "  VM FQDN    : $vmHost"
+Write-Info "  Cert source: $certSourcePath"
+Write-Info "  AutoConfig : $autoConfigZip"
+Write-Info "  SQL file   : $sqlSourcePath"
 Write-Host ''
 
 # ─────────────────────────────────────────────
@@ -212,21 +222,21 @@ Write-Step 'Validating NAS3 paths'
 
 if (-not (Test-Path $certSourcePath)) {
     Write-Fail "Cert folder not found: $certSourcePath"
-    Write-Host "  Check that Market and Client names are correct." -ForegroundColor Yellow
+    Write-Warn "Check that Market and Client names are correct."
     exit 1
 }
 Write-Success "Cert folder found: $certSourcePath"
 
 if (-not (Test-Path $autoConfigZip)) {
     Write-Fail "AutoConfig zip not found: $autoConfigZip"
-    Write-Host "  Expected: AutoConfig-$market.zip in $NAS3_AUTOCONFIG" -ForegroundColor Yellow
+    Write-Warn "Expected: AutoConfig-$market.zip in $NAS3_AUTOCONFIG"
     exit 1
 }
 Write-Success "AutoConfig zip found: $autoConfigZip"
 
 if (-not (Test-Path $sqlSourcePath)) {
     Write-Fail "SQL file not found: $sqlSourcePath"
-    Write-Host "  Expected: $client.sql under $NAS3_SQL_ROOT\$market\" -ForegroundColor Yellow
+    Write-Warn "Expected: $client.sql under $NAS3_SQL_ROOT\$market\"
     exit 1
 }
 Write-Success "SQL file found: $sqlSourcePath"
@@ -239,12 +249,12 @@ foreach ($ext in $CERT_EXTENSIONS) {
 
 if ($certFiles.Count -eq 0) {
     Write-Fail "No cert/credential files found in $certSourcePath"
-    Write-Host "  Expected extensions: pfx, p12, ppk, cer, crt, txt" -ForegroundColor Yellow
+    Write-Warn "Expected extensions: pfx, p12, ppk, cer, crt, txt"
     exit 1
 }
 Write-Success "$($certFiles.Count) file(s) found in cert folder:"
 foreach ($f in $certFiles) {
-    Write-Host "    - $($f.Name)" -ForegroundColor DarkGray
+    Write-Info "  - $($f.Name)"
 }
 
 # ─────────────────────────────────────────────
@@ -256,13 +266,13 @@ Write-Step "Testing WinRM connectivity to $vmHost"
 try {
     $wsmanResult = Test-WSMan -ComputerName $vmHost -ErrorAction Stop
     Write-Success "WinRM responded on $vmHost"
-    Write-Host "    Vendor  : $($wsmanResult.ProductVendor)"  -ForegroundColor DarkGray
-    Write-Host "    Version : $($wsmanResult.ProductVersion)" -ForegroundColor DarkGray
+    Write-Info "  Vendor  : $($wsmanResult.ProductVendor)"
+    Write-Info "  Version : $($wsmanResult.ProductVersion)"
 }
 catch {
     Write-Fail "Cannot reach $vmHost via WinRM."
-    Write-Host "  Error: $_" -ForegroundColor Yellow
-    Write-Host "  Verify the VM name is correct and that you are on the PCI network." -ForegroundColor Yellow
+    Write-Warn "Error: $_"
+    Write-Warn "Verify the VM name is correct and that you are on the PCI network."
     exit 1
 }
 
@@ -321,8 +331,8 @@ try {
 }
 catch {
     Write-Fail "Failed to create PSSession to $vmHost"
-    Write-Host "  Error: $_" -ForegroundColor Yellow
-    Write-Host "  Check credentials and that PSRemoting is enabled on the VM." -ForegroundColor Yellow
+    Write-Warn "Error: $_"
+    Write-Warn "Check credentials and that PSRemoting is enabled on the VM."
     # Cleanup local temp
     Remove-Item -Path $localTemp -Recurse -Force -ErrorAction SilentlyContinue
     exit 1
@@ -395,11 +405,11 @@ try {
     # ─────────────────────────────────────────────
 
     Write-Step "Executing AutoConfig script on VM (elevated)"
-    Write-Host "  Script    : $mainScript"              -ForegroundColor DarkGray
-    Write-Host "  Market    : $market"                  -ForegroundColor DarkGray
-    Write-Host "  Client    : $client"                  -ForegroundColor DarkGray
-    Write-Host "  CertDir   : $VM_TEMP_DIR\Certs"       -ForegroundColor DarkGray
-    Write-Host "  SQL file  : $VM_TEMP_DIR\$client.sql" -ForegroundColor DarkGray
+    Write-Info "Script    : $mainScript"              
+    Write-Info "Market    : $market"                  
+    Write-Info "Client    : $client"                  
+    Write-Info "CertDir   : $VM_TEMP_DIR\Certs"       
+    Write-Info "SQL file  : $VM_TEMP_DIR\$client.sql" 
     Write-Host ''
 
     $result = Invoke-Command -Session $session -ScriptBlock {
@@ -419,17 +429,14 @@ try {
     }
     else {
         Write-Fail "Configure_Domain.ps1 finished with exit code: $result"
-        Write-Host "  Review logs on the VM for details." -ForegroundColor Yellow
+        Write-Warn "Review logs on the VM for details."
     }
 }
 catch {
     Write-Fail "An error occurred during remote execution."
-    Write-Host "  Error: $_" -ForegroundColor Yellow
-    
-    Write-Host "Type: $($_.Exception.GetType().FullName)"
-    Write-Host "Message: $($_.Exception.Message)"
-    Write-Host "Stack:"
-    Write-Host $_.ScriptStackTrace
+    Write-Warn "Error: $_"
+    # Write-Warn "Stack:"
+    # Write-Warn $_.ScriptStackTrace
 }
 finally {
 
@@ -450,7 +457,7 @@ finally {
         Write-Success "Temp files removed from VM"
     }
     catch {
-        Write-Host "  Warning: Could not remove temp files from VM. Manual cleanup may be needed at: $VM_TEMP_DIR" -ForegroundColor Yellow
+        Write-Warn "Warning: Could not remove temp files from VM. Manual cleanup may be needed at: $VM_TEMP_DIR"
     }
 
     # Close the PSSession
