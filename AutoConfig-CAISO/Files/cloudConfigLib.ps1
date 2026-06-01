@@ -134,7 +134,7 @@ function loadOracle {
     if (!(test-path 'C:\oracle\odp.net\')) {
         if (!(test-path -type leaf $ora12local)) {
             Write-Warn "ODP assembly not found. Attempting to install ODP managed drivers"
-            &cmd /c "cd $odpInstall && $odpInstallbat $odpInstallParam1 $odpInstallParam2 $odpInstallParam3"
+            &cmd /c "cd $odpInstall && $odpInstallbat $odpInstallParam1 $odpInstallParam2 $odpInstallParam3" | Out-Null
         }
     }
 	

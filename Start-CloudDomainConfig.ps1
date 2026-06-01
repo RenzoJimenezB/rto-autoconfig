@@ -54,8 +54,8 @@ $ErrorActionPreference = 'Stop'
 # ─────────────────────────────────────────────
 
 $NAS3_CERTS_ROOT = '\\nas3\Client-Certificates'
-$NAS3_AUTOCONFIG = '\\nas3\shared\Cloud Domain AutoConfig'
-$NAS3_SQL_ROOT = '\\nas3\shared\Cloud Domain AutoConfig\SQL'
+$NAS3_AUTOCONFIG = '\\nas3\Client-Certificates\AutoConfig'
+$NAS3_SQL_ROOT = '\\nas3\Client-Certificates\AutoConfig\SQL'
 
 $VM_DOMAIN_SUFFIX = '.cloud.pci'
 $VM_TEMP_DIR = 'C:\Temp\CloudDomainConfig'   # temp dir created on the VM
@@ -203,14 +203,14 @@ Write-Info "Client set to: $client"
 
 # Derive paths
 $certSourcePath = Join-Path $NAS3_CERTS_ROOT "$certFolder\$client"
-$autoConfigZip = Join-Path $NAS3_AUTOCONFIG  "AutoConfig-$market.zip"
+$autoConfigFolder = Join-Path $NAS3_AUTOCONFIG  "AutoConfig-$market"
 $sqlSourcePath = Join-Path $NAS3_SQL_ROOT "$market\$client.sql"
 
 Write-Host ''
 Write-Info 'Summary:'
 Write-Info "  VM FQDN    : $vmHost"
 Write-Info "  Cert source: $certSourcePath"
-Write-Info "  AutoConfig : $autoConfigZip"
+Write-Info "  AutoConfig : $autoConfigFolder"
 Write-Info "  SQL file   : $sqlSourcePath"
 Write-Host ''
 
@@ -227,12 +227,12 @@ if (-not (Test-Path $certSourcePath)) {
 }
 Write-Success "Cert folder found: $certSourcePath"
 
-if (-not (Test-Path $autoConfigZip)) {
-    Write-Fail "AutoConfig zip not found: $autoConfigZip"
-    Write-Warn "Expected: AutoConfig-$market.zip in $NAS3_AUTOCONFIG"
+if (-not (Test-Path $autoConfigFolder)) {
+    Write-Fail "AutoConfig folder not found: $autoConfigFolder"
+    Write-Warn "Expected: AutoConfig-$market folder in $NAS3_AUTOCONFIG"
     exit 1
 }
-Write-Success "AutoConfig zip found: $autoConfigZip"
+Write-Success "AutoConfig folder found: $autoConfigFolder"
 
 if (-not (Test-Path $sqlSourcePath)) {
     Write-Fail "SQL file not found: $sqlSourcePath"
@@ -309,10 +309,10 @@ foreach ($f in $certFiles) {
 }
 Write-Success "Copied $($certFiles.Count) cert file(s) to staging"
 
-# Copy AutoConfig zip
-$localZip = Join-Path $localTemp (Split-Path $autoConfigZip -Leaf)
-Copy-Item -Path $autoConfigZip -Destination $localZip
-Write-Success "Copied AutoConfig zip to staging"
+# Copy AutoConfig folder
+$localAutoConfig = Join-Path $localTemp "AutoConfig-$market"
+Copy-Item -Path $autoConfigFolder -Destination $localAutoConfig -Recurse
+Write-Success "Copied AutoConfig folder to staging"
 
 # Copy SQL file
 $localSql = Join-Path $localTemp "$client.sql"
@@ -359,13 +359,13 @@ try {
         -Force
     Write-Success "Cert files transferred"
 
-    # Transfer AutoConfig zip
-    Write-Step "Transferring AutoConfig zip to VM"
-    Copy-Item -Path $localZip `
+    # Transfer AutoConfig folder
+    Write-Step "Transferring AutoConfig folder to VM"
+    Copy-Item -Path $localAutoConfig `
         -Destination $VM_TEMP_DIR `
         -ToSession $session `
-        -Force
-    Write-Success "AutoConfig zip transferred"
+        -Recurse -Force
+    Write-Success "AutoConfig folder transferred"
 
     # Transfer SQL file
     Write-Step "Transferring SQL file to VM"
@@ -376,33 +376,10 @@ try {
     Write-Success "SQL file transferred: $client.sql"
 
     # ─────────────────────────────────────────────
-    #  STEP 7 — Extract zip and find main script
+    #  STEP 7 — Execute main script elevated on VM
     # ─────────────────────────────────────────────
 
-    Write-Step "Extracting AutoConfig zip on VM"
-    $mainScript = Invoke-Command -Session $session -ScriptBlock {
-        param($dir, $zipName)
-
-        $zipPath = Join-Path $dir $zipName
-        $extractDir = Join-Path $dir 'AutoConfig'
-
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $extractDir)
-
-        $ps1 = Get-ChildItem -Path $extractDir -Filter 'Configure_Domain.ps1' -File -Recurse |
-        Select-Object -First 1
-
-        if (-not $ps1) {
-            throw "Configure_Domain.ps1 not found inside the AutoConfig zip."
-        }
-        return $ps1.FullName
-    } -ArgumentList $VM_TEMP_DIR, (Split-Path $localZip -Leaf)
-
-    Write-Success "Extracted. Main script: $mainScript"
-
-    # ─────────────────────────────────────────────
-    #  STEP 8 — Execute main script elevated on VM
-    # ─────────────────────────────────────────────
+    $mainScript = "$VM_TEMP_DIR\AutoConfig-$market\Configure_Domain.ps1"
 
     Write-Step "Executing AutoConfig script on VM (elevated)"
     Write-Info "Script    : $mainScript"              
@@ -443,7 +420,7 @@ catch {
 finally {
 
     # ─────────────────────────────────────────────
-    #  STEP 9 — Cleanup
+    #  STEP 8 — Cleanup
     # ─────────────────────────────────────────────
 
     Write-Step "Cleaning up"

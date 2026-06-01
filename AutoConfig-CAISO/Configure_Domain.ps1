@@ -52,7 +52,7 @@ function Write-Info {
 
 # Get working path
 $scriptDir = $PSScriptRoot
-$configLib = Join-Path $scriptDir "Files\cloudConfigLib.ps1"
+$configLib = Join-Path $scriptDir "cloudConfigLib.ps1"
 
 # Load cloudConfigLib.ps1
 if (-not (Test-Path $configLib)) {
@@ -116,7 +116,7 @@ try {
 
     $conn = New-Object Oracle.ManagedDataAccess.Client.OracleConnection($constr)
     $conn.Open()
-    Write-Success 'Connected to DB successfully!'
+    Write-Success 'Connected to DB successfully'
 
     Write-Step 'Executing SQL scripts'
     
