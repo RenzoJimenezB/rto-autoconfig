@@ -132,9 +132,7 @@ try {
     }
     catch { throw "Client SQL failed: $($_.Exception.Message)" }
 
-    Write-Step "Restarting GSMS service"
-    Stop-Service $gsmsSvc
-    Start-Service $gsmsSvc
+    Restart-ServiceSafely -ServiceName $gsmsSvc
     Write-Success 'Script completed'
 }
 catch {

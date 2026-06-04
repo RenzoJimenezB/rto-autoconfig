@@ -11,8 +11,8 @@
     not by invoking the script directly.
 
 .NOTES
-    Location : \\nas3\shared\Cloud Domain AutoConfig\Start-CloudDomainConfig.ps1
-    Launcher : \\nas3\shared\Cloud Domain AutoConfig\Start-CloudDomainConfig.bat
+    Location : \\nas3\Client-Certificates\AutoConfig\Start-CloudDomainConfig.ps1
+    Launcher : \\nas3\Client-Certificates\AutoConfig\Start-CloudDomainConfig.bat
     Author   : R. Jimenez
     Updated  : 2026-05-27
 #>
@@ -61,7 +61,7 @@ $VM_DOMAIN_SUFFIX = '.cloud.pci'
 $VM_TEMP_DIR = 'C:\Temp\CloudDomainConfig'   # temp dir created on the VM
 
 # Extensions to copy from the client cert folder
-$CERT_EXTENSIONS = @('*.pfx', '*.p12', '*.ppk', '*.cer', '*.crt', '*.txt')
+$CERT_EXTENSIONS = @('*.pfx', '*.p12', '*.ppk', '*.cer', '*.crt', '*.id', '*.txt')
 
 # ─────────────────────────────────────────────
 #  HELPER FUNCTIONS

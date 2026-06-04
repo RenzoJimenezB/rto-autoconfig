@@ -140,7 +140,8 @@ function loadOracle {
 	
     if (test-path -type leaf $ora12local) {
         Add-Type -Path $ora12local
-        Write-Info "ODP assembly loaded: $ora12local"		
+        Write-Info "ODP assembly loaded:"
+        Write-Info "$ora12local"		
     }
     else {
         Write-Fail "Cannot find $ora12local to load"
@@ -331,4 +332,46 @@ $sql
 COMMIT; 
 END;
 "@
+}
+
+# ─────────────────────────────────────────────
+#  Service Helpers
+# ─────────────────────────────────────────────
+function Restart-ServiceSafely {
+    param(
+        [string]$ServiceName,
+        [int]$StopTimeoutSec = 30,
+        [int]$StartTimeoutSec = 30
+    )
+
+    $currentStatus = (Get-Service $ServiceName).Status
+
+    # STOP
+    Write-Step "Stopping $ServiceName..."
+
+    if ($currentStatus -ne 'Stopped') {
+        Stop-Service $ServiceName -ErrorAction Stop
+
+        $elapsed = 0
+        while ((Get-Service $ServiceName).Status -ne 'Stopped') {
+            if ($elapsed -ge $StopTimeoutSec) {
+                Write-Fail "$ServiceName failed to stop after ${StopTimeoutSec}s"
+            }
+            Start-Sleep -Seconds 2
+            $elapsed += 2
+        }
+        Write-Success "Service stopped (after ${elapsed}s)"
+    }
+    else {
+        Write-Warn "$ServiceName was already stopped, skipping stop phase"
+    } 
+
+    # START
+    Write-Step "Starting $ServiceName..."
+    
+    $startTime = Get-Date
+    Start-Service $ServiceName -ErrorAction Stop -WarningAction SilentlyContinue
+
+    $elapsed = [int](New-TimeSpan -Start $startTime -End (Get-Date)).TotalSeconds
+    Write-Success "Service running (after ${elapsed}s)"
 }
