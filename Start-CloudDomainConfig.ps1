@@ -242,10 +242,23 @@ if (-not (Test-Path $sqlSourcePath)) {
 Write-Success "SQL file found: $sqlSourcePath"
 
 # Collect cert files
-$certFiles = @()
-foreach ($ext in $CERT_EXTENSIONS) {
-    $certFiles += Get-ChildItem -Path $certSourcePath -Filter $ext -File -ErrorAction SilentlyContinue
+$allFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue
+
+# Files matching explicit extensions
+$certFiles = $allFiles | Where-Object {
+    $name = $_.Name
+    $CERT_EXTENSIONS | Where-Object { $name -like $_ }
 }
+
+# Get basenames of .ppk files, then find matching extensionless companions
+$ppkBasenames = $allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName }
+
+$extensionlessFiles = $allFiles | Where-Object {
+    $_.Extension -eq '' -and $_.BaseName -in $ppkBasenames
+}
+
+# Merge both sets
+$certFiles = @($certFiles) + @($extensionlessFiles) | Sort-Object Name -Unique
 
 if ($certFiles.Count -eq 0) {
     Write-Fail "No cert/credential files found in $certSourcePath"
@@ -279,10 +292,6 @@ catch {
 # ─────────────────────────────────────────────
 #  STEP 4 — Prompt for admin credentials
 # ─────────────────────────────────────────────
-
-# Write-Step 'Prompting for VM admin credentials'
-# Write-Host '  Enter the privileged admin account for the VM (e.g. DOMAIN\Administrator)' -ForegroundColor Gray
-# $adminCred = Get-Credential -Message "Admin credentials for $vmHost"
 
 Write-Step 'Preparing VM admin credentials'
 if (-not $runningFromApp) {
@@ -332,7 +341,7 @@ try {
 catch {
     Write-Fail "Failed to create PSSession to $vmHost"
     Write-Warn "Error: $_"
-    Write-Warn "Check credentials and that PSRemoting is enabled on the VM."
+    Write-Warn "Check credentials and that PSRemoting is enabled on the VM"
     # Cleanup local temp
     Remove-Item -Path $localTemp -Recurse -Force -ErrorAction SilentlyContinue
     exit 1
@@ -419,8 +428,8 @@ try {
 catch {
     Write-Host ''
     Write-Host '=============================================' -ForegroundColor DarkCyan
-    Write-Fail "Configure_Domain.ps1 finished with errors"
-    Write-Warn "Review the output above for details"
+    Write-Fail "An error occurred during remote execution"
+    Write-Warn "Error: $_"
 } 
 finally {
 
