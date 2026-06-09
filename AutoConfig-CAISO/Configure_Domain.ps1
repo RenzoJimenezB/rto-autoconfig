@@ -56,8 +56,7 @@ $configLib = Join-Path $scriptDir "cloudConfigLib.ps1"
 
 # Load cloudConfigLib.ps1
 if (-not (Test-Path $configLib)) {
-    Write-Fail "Cannot find cloudConfigLib.ps1"
-    exit 1
+    throw 'Cannot find cloudConfigLib.ps1'
 }
 . $configLib
 
@@ -135,8 +134,7 @@ try {
     Restart-ServiceSafely -ServiceName $gsmsSvc
 }
 catch {
-    Write-Fail $_.Exception.Message
-    exit 1
+    throw $_.Exception.Message
 }
 finally {
     if ($conn -and $conn.State -eq 'Open') { $conn.Close() }

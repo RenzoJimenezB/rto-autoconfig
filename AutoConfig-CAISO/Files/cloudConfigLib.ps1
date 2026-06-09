@@ -29,7 +29,8 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir) {
         'APS-MT'     = 'MST'
         'APS-TO'     = 'MST'
         'PNM'        = 'MST'
-        'SRP'        = 'MST'
+        'SRP-STF'    = 'MST'
+        'SRP-TGO '   = 'MST'
         'UMPA'       = 'MST'
         'APU'        = 'PST'
         'Avista'     = 'PST'
@@ -42,7 +43,8 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir) {
         'PacGas'     = 'PST'
         'PacifiCorp' = 'PST'
         'PortGen'    = 'PST'
-        'PSE'        = 'PST'
+        'PSE-MT'     = 'PST'
+        'PSE-TO'     = 'PST'
         'SDCP'       = 'PST'
         'SDGE-MT'    = 'PST'
         'SMUD'       = 'PST'
@@ -60,7 +62,7 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir) {
     $timezoneabbv = $clientTimezones[$clientName]
 
     if (-not $timezoneabbv) {
-        throw "Unknown client '$clientName'. Please add them to the client timezone lookup table."
+        throw "Unknown client '$clientName'. Please add them to the client timezone lookup table"
     }
 
     $timezone = $timezoneMap[$timezoneabbv]
@@ -126,8 +128,7 @@ function loadOracle {
         [System.IO.Compression.ZipFile]::ExtractToDirectory($odpZip, $odpTarget)
         #verify extraction: 
         if (!(test-path -type leaf 'C:\Oracle_ODP_Install\install_odpm.bat')) {
-            Write-Fail "ODP extraction failed. Check drive space and permissions"
-            exit 1 
+            throw 'ODP extraction failed. Check drive space and permissions'
         }
     }
 	
@@ -145,8 +146,7 @@ function loadOracle {
         Write-Info "$ora12local"
     }
     else {
-        Write-Fail "Cannot find $ora12local to load"
-        exit 1
+        throw "Cannot find $ora12local to load"
     }
 }
 
@@ -203,8 +203,7 @@ function wl_encrypt_pw ([string]$javaPath, [string]$encryptme) {
 # ─────────────────────────────────────────────
 function wl_config_modify($file, $jksFile, $enc_pw) {
     if (!(($file) -or ($jksFile) -or ($enc_pw))) {
-        Write-Fail "Missing a SSL input."
-        exit 1
+        throw 'Missing a SSL input'
     }
 
     $saveit = 0
@@ -315,16 +314,14 @@ function buildjdbc {
 function genericSQL([string]$Market) {
     $genericSQLPath = Join-Path $scriptDir "Files\genericSQL_$market.sql"
     if (!(Test-Path $genericSQLPath)) {
-        Write-Fail "Missing generic SQL file: $genericSQLPath"
-        exit 1
+        throw "Missing generic SQL file: $genericSQLPath"
     }
     return (Get-Content -Path $genericSQLPath -Raw)
 }
 
 function clientSQL([string]$SqlFilePath) {
     if (-not (Test-Path $SqlFilePath)) {
-        Write-Fail "Client SQL file not found: $SqlFilePath"
-        exit 1
+        throw "Client SQL file not found: $SqlFilePath"
     }
     $sql = Get-Content -Path $SqlFilePath -Raw
     return @"
@@ -356,7 +353,7 @@ function Restart-ServiceSafely {
         $elapsed = 0
         while ((Get-Service $ServiceName).Status -ne 'Stopped') {
             if ($elapsed -ge $StopTimeoutSec) {
-                Write-Fail "$ServiceName failed to stop after ${StopTimeoutSec}s"
+                throw "$ServiceName failed to stop after ${StopTimeoutSec}s"
             }
             Start-Sleep -Seconds 2
             $elapsed += 2
