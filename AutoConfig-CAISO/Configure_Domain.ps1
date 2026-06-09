@@ -133,7 +133,6 @@ try {
     catch { throw "Client SQL failed: $($_.Exception.Message)" }
 
     Restart-ServiceSafely -ServiceName $gsmsSvc
-    Write-Success 'Script completed'
 }
 catch {
     Write-Fail $_.Exception.Message

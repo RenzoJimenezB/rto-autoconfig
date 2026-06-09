@@ -26,7 +26,8 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir) {
     $clientTimezones = @{
         'Shell'      = 'CST'
         'RWE'        = 'CST'
-        'APS'        = 'MST'
+        'APS-MT'     = 'MST'
+        'APS-TO'     = 'MST'
         'PNM'        = 'MST'
         'SRP'        = 'MST'
         'UMPA'       = 'MST'
@@ -43,7 +44,7 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir) {
         'PortGen'    = 'PST'
         'PSE'        = 'PST'
         'SDCP'       = 'PST'
-        'SDGE'       = 'PST'
+        'SDGE-MT'    = 'PST'
         'SMUD'       = 'PST'
         'TPU'        = 'PST'
         'TID'        = 'PST'
@@ -141,7 +142,7 @@ function loadOracle {
     if (test-path -type leaf $ora12local) {
         Add-Type -Path $ora12local
         Write-Info "ODP assembly loaded:"
-        Write-Info "$ora12local"		
+        Write-Info "$ora12local"
     }
     else {
         Write-Fail "Cannot find $ora12local to load"

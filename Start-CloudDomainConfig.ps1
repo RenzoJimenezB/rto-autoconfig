@@ -374,23 +374,32 @@ try {
         -ToSession $session `
         -Force
     Write-Success "SQL file transferred: $client.sql"
+}
+catch {
+    Write-Fail "VM preparation failed"
+    Write-Warn "Error: $_"
+    Write-Warn "Could not complete directory setup or file transfers"
+    Remove-Item -Path $localTemp -Recurse -Force -ErrorAction SilentlyContinue
+    exit 1
+}
 
-    # ─────────────────────────────────────────────
-    #  STEP 7 — Execute main script elevated on VM
-    # ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
+#  STEP 7 — Execute main script elevated on VM
+# ─────────────────────────────────────────────
 
-    $mainScript = "$VM_TEMP_DIR\AutoConfig-$market\Configure_Domain.ps1"
+$mainScript = "$VM_TEMP_DIR\AutoConfig-$market\Configure_Domain.ps1"
 
-    Write-Step "Executing AutoConfig script on VM (elevated)"
-    Write-Info "Script    : $mainScript"              
-    Write-Info "Market    : $market"                  
-    Write-Info "Client    : $client"                  
-    Write-Info "CertDir   : $VM_TEMP_DIR\Certs"       
-    Write-Info "SQL file  : $VM_TEMP_DIR\$client.sql" 
-    Write-Host ''
+Write-Step "Executing AutoConfig script on VM (elevated)"
+Write-Info "Script    : $mainScript"              
+Write-Info "Market    : $market"                  
+Write-Info "Client    : $client"                  
+Write-Info "CertDir   : $VM_TEMP_DIR\Certs"       
+Write-Info "SQL file  : $VM_TEMP_DIR\$client.sql" 
+Write-Host ''
 
-    Write-Host '=============================================' -ForegroundColor DarkCyan
+Write-Host '=============================================' -ForegroundColor DarkCyan
 
+try {
     Invoke-Command -Session $session -ScriptBlock {
         param($scriptPath, $market, $client, $certDir, $sqlFilePath)
 
@@ -399,24 +408,20 @@ try {
             -CertDir     $certDir `
             -SqlFilePath $sqlFilePath
 
-    } -ArgumentList $mainScript, $market, $client, "$VM_TEMP_DIR\Certs", "$VM_TEMP_DIR\$client.sql"
+        if (-not $?) { throw }
 
-    if ($?) {
-        Write-Host ''
-        Write-Host '=============================================' -ForegroundColor DarkCyan
-        Write-Success "Configure_Domain.ps1 completed successfully"
-    }
-    else {
-        Write-Fail "Configure_Domain.ps1 finished with errors"
-        Write-Warn "Review logs on the VM for details."
-    }
+    } -ArgumentList $mainScript, $market, $client, "$VM_TEMP_DIR\Certs", "$VM_TEMP_DIR\$client.sql" -ErrorAction Stop
+
+    Write-Host ''
+    Write-Host '=============================================' -ForegroundColor DarkCyan
+    Write-Success "Configure_Domain.ps1 completed successfully"
 }
 catch {
-    Write-Fail "An error occurred during remote execution."
-    Write-Warn "Error: $_"
-    # Write-Warn "Stack:"
-    # Write-Warn $_.ScriptStackTrace
-}
+    Write-Host ''
+    Write-Host '=============================================' -ForegroundColor DarkCyan
+    Write-Fail "Configure_Domain.ps1 finished with errors"
+    Write-Warn "Review the output above for details"
+} 
 finally {
 
     # ─────────────────────────────────────────────
