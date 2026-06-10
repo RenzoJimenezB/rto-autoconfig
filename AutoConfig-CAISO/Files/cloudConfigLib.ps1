@@ -39,7 +39,7 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir) {
         'DTE'        = 'PST'
         'IID'        = 'PST'
         'LADWP'      = 'PST'
-        'NVE'        = 'PST'
+        'NVE-MT'     = 'PST'
         'PacGas'     = 'PST'
         'PacifiCorp' = 'PST'
         'PortGen'    = 'PST'

@@ -2,10 +2,9 @@
 ==============================================================================================
  Microsoft PowerShell Source File
  NAME:				Configure_Domain.ps1
- LAST UPDATED:		05/14/2026
 
- AUTHOR:			Seth Hoots
- REVISION:			Renzo Jimenez
+ AUTHOR:			Renzo Jimenez
+ ORIGINAL SCRIPT:	Seth Hoots
 
  COMMENT: 
     Market-specific auto configuration script for PCI Cloud domains.

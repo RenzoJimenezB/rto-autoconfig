@@ -13,8 +13,8 @@
 .NOTES
     Location : \\nas3\Client-Certificates\AutoConfig\Start-CloudDomainConfig.ps1
     Launcher : \\nas3\Client-Certificates\AutoConfig\Start-CloudDomainConfig.bat
-    Author   : R. Jimenez
-    Updated  : 2026-05-27
+    Author   : Renzo Jimenez
+    Created  : 2026-05-25
 #>
 
 # ── Preflight ─────────────────────────────────────────────────────────────────
