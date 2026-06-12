@@ -137,6 +137,10 @@ if (-not $runningFromApp) {
     } while ($market -notin $validMarkets)
 }
 
+$noSettlementsClients = @(
+    'SMUD'
+)
+
 $certFolder = if ($market -eq 'CAISO') { 'CAISO-Settlements' } else { $market }
 
 # Load canonical client list from file
@@ -220,12 +224,21 @@ Write-Host ''
 
 Write-Step 'Validating NAS3 paths'
 
+$skipSettlements = $market -eq 'CAISO' -and $noSettlementsClients -contains $client
+
 if (-not (Test-Path $certSourcePath)) {
-    Write-Fail "Cert folder not found: $certSourcePath"
-    Write-Warn "Check that Market and Client names are correct."
-    exit 1
+    if ($skipSettlements) {
+        Write-Info "${client}: CAISO Settlements not applicable. SFTP certs not required"
+    }
+    else {
+        Write-Fail "Cert folder not found: $certSourcePath"
+        Write-Warn "Check that Market and Client names are correct"
+        exit 1
+    }
 }
-Write-Success "Cert folder found: $certSourcePath"
+else {
+    Write-Success "Cert folder found: $certSourcePath"
+}
 
 if (-not (Test-Path $autoConfigFolder)) {
     Write-Fail "AutoConfig folder not found: $autoConfigFolder"
@@ -241,33 +254,35 @@ if (-not (Test-Path $sqlSourcePath)) {
 }
 Write-Success "SQL file found: $sqlSourcePath"
 
-# Collect cert files
-$allFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue
+if (-not $skipSettlements) {
+    # Collect cert files
+    $allFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue
 
-# Files matching explicit extensions
-$certFiles = $allFiles | Where-Object {
-    $name = $_.Name
-    $CERT_EXTENSIONS | Where-Object { $name -like $_ }
-}
+    # Files matching explicit extensions
+    $certFiles = $allFiles | Where-Object {
+        $name = $_.Name
+        $CERT_EXTENSIONS | Where-Object { $name -like $_ }
+    }
 
-# Get basenames of .ppk files, then find matching extensionless companions
-$ppkBasenames = $allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName }
+    # Get basenames of .ppk files, then find matching extensionless companions
+    $ppkBasenames = $allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName }
 
-$extensionlessFiles = $allFiles | Where-Object {
-    $_.Extension -eq '' -and $_.BaseName -in $ppkBasenames
-}
+    $extensionlessFiles = $allFiles | Where-Object {
+        $_.Extension -eq '' -and $_.BaseName -in $ppkBasenames
+    }
 
-# Merge both sets
-$certFiles = @($certFiles) + @($extensionlessFiles) | Sort-Object Name -Unique
+    # Merge both sets
+    $certFiles = @($certFiles) + @($extensionlessFiles) | Sort-Object Name -Unique
 
-if ($certFiles.Count -eq 0) {
-    Write-Fail "No cert/credential files found in $certSourcePath"
-    Write-Warn "Expected extensions: pfx, p12, ppk, cer, crt, txt"
-    exit 1
-}
-Write-Success "$($certFiles.Count) file(s) found in cert folder:"
-foreach ($f in $certFiles) {
-    Write-Info "  - $($f.Name)"
+    if ($certFiles.Count -eq 0) {
+        Write-Fail "No cert/credential files found in $certSourcePath"
+        Write-Warn "Expected extensions: pfx, p12, ppk, cer, crt, txt"
+        exit 1
+    }
+    Write-Success "$($certFiles.Count) file(s) found in cert folder:"
+    foreach ($f in $certFiles) {
+        Write-Info "  - $($f.Name)"
+    }
 }
 
 # ─────────────────────────────────────────────
@@ -311,12 +326,14 @@ New-Item -ItemType Directory -Path $localTemp -Force | Out-Null
 Write-Success "Local staging folder: $localTemp"
 
 # Copy cert files
-$localCertsDir = Join-Path $localTemp 'Certs'
-New-Item -ItemType Directory -Path $localCertsDir -Force | Out-Null
-foreach ($f in $certFiles) {
-    Copy-Item -Path $f.FullName -Destination $localCertsDir
+if (-not $skipSettlements) {
+    $localCertsDir = Join-Path $localTemp 'Certs'
+    New-Item -ItemType Directory -Path $localCertsDir -Force | Out-Null
+    foreach ($f in $certFiles) {
+        Copy-Item -Path $f.FullName -Destination $localCertsDir
+    }
+    Write-Success "Copied $($certFiles.Count) cert file(s) to staging"
 }
-Write-Success "Copied $($certFiles.Count) cert file(s) to staging"
 
 # Copy AutoConfig folder
 $localAutoConfig = Join-Path $localTemp "AutoConfig-$market"
@@ -360,13 +377,15 @@ try {
     } -ArgumentList $VM_TEMP_DIR
     Write-Success "Temp directory ready on VM"
 
-    # Transfer cert files
-    Write-Step "Transferring cert files to VM"
-    Copy-Item -Path "$localCertsDir\*" `
-        -Destination "$VM_TEMP_DIR\Certs" `
-        -ToSession $session `
-        -Force
-    Write-Success "Cert files transferred"
+    if (-not $skipSettlements) {
+        # Transfer cert files
+        Write-Step "Transferring cert files to VM"
+        Copy-Item -Path "$localCertsDir\*" `
+            -Destination "$VM_TEMP_DIR\Certs" `
+            -ToSession $session `
+            -Force
+        Write-Success "Cert files transferred"
+    }
 
     # Transfer AutoConfig folder
     Write-Step "Transferring AutoConfig folder to VM"
