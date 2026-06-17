@@ -138,7 +138,10 @@ if (-not $runningFromApp) {
 }
 
 $noSettlementsClients = @(
-    'SMUD'
+    'AVISTA-TO',
+    'SMUD',
+    'PAC',
+    'PNM-EESC'
 )
 
 $certFolder = if ($market -eq 'CAISO') { 'CAISO-Settlements' } else { $market }
@@ -226,18 +229,18 @@ Write-Step 'Validating NAS3 paths'
 
 $skipSettlements = $market -eq 'CAISO' -and $noSettlementsClients -contains $client
 
-if (-not (Test-Path $certSourcePath)) {
-    if ($skipSettlements) {
-        Write-Info "${client}: CAISO Settlements not applicable. SFTP certs not required"
-    }
-    else {
+if ($skipSettlements) {
+    Write-Info "${client}: CAISO Settlements not applicable. SFTP certs not required"
+}
+else {
+    if (-not (Test-Path $certSourcePath)) {
         Write-Fail "Cert folder not found: $certSourcePath"
         Write-Warn "Check that Market and Client names are correct"
         exit 1
     }
-}
-else {
-    Write-Success "Cert folder found: $certSourcePath"
+    else {
+        Write-Success "Cert folder found: $certSourcePath"
+    }
 }
 
 if (-not (Test-Path $autoConfigFolder)) {
@@ -264,15 +267,18 @@ if (-not $skipSettlements) {
         $CERT_EXTENSIONS | Where-Object { $name -like $_ }
     }
 
-    # Get basenames of .ppk files, then find matching extensionless companions
+    # Get basenames of .ppk ant .txt files, then find matching extensionless companions
     $ppkBasenames = $allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName }
+    $txtBasenames = $allFiles | Where-Object { $_.Extension -eq '.txt' } | ForEach-Object { $_.BaseName }
+
+    $matchingBasenames = ($ppkBasenames + $txtBasenames) | Sort-Object -Unique
 
     $extensionlessFiles = $allFiles | Where-Object {
-        $_.Extension -eq '' -and $_.BaseName -in $ppkBasenames
+        $_.Extension -eq '' -and $_.BaseName -in $matchingBasenames
     }
 
     # Merge both sets
-    $certFiles = @($certFiles) + @($extensionlessFiles) | Sort-Object Name -Unique
+    $certFiles = @(@($certFiles) + @($extensionlessFiles) | Sort-Object Name -Unique)
 
     if ($certFiles.Count -eq 0) {
         Write-Fail "No cert/credential files found in $certSourcePath"
