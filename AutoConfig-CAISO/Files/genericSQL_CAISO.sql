@@ -37,6 +37,8 @@ BEGIN
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Exports' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'RTP.OBJ_STORE_PATH';
 
 	UPDATE SPARAMETER SET VALUE = 'PCI Cloud Environment' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'ENVIRONMENT';
+	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/pcilogo.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO';
+	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/pcilogo.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO_DARK';
 
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Import_Datafeed\ETL_Export_Latest' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'ETL_EXPORT_LATEST';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Exports' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'EXPORT_FILES';
@@ -51,9 +53,6 @@ BEGIN
 	UPDATE SPARAMETER SET VALUE = 'true' WHERE SYSTEM = 'GenManager' and TYPE = 'ISO' and NAME = 'STORE_BID_SUBMIT_DATA';
 	UPDATE SPARAMETER SET VALUE = 'C:\ISO\STORE_BID_SUBMIT_DATA' WHERE SYSTEM = 'GenManager' and TYPE = 'ISO' and NAME = 'STORE_BID_SUBMIT_DATA_DIR';
 	UPDATE SPARAMETER SET VALUE = 'true' WHERE SYSTEM = 'GenManager' and TYPE = 'ISO' and NAME = 'STORE_CB_BID_DATA';
-	
-	UPDATE SPARAMETER SET VALUE = 'DEV REFRESH' WHERE NAME = 'ENVIRONMENT';
-	UPDATE SPARAMETER SET VALUE = 'PCI Cloud Environment' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'ENVIRONMENT';
 
 	DELETE FROM SPARAMETER WHERE NAME = 'AUTO_QUERY_BID_RESULTS_RT';
 	BEGIN 
