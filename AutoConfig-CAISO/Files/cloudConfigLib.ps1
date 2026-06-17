@@ -24,33 +24,39 @@ function initFunc_Common {
 # ─────────────────────────────────────────────
 function initFunc_CAISO([string]$clientName, [string]$CertDir) {
     $clientTimezones = @{
-        'Shell'      = 'CST'
-        'RWE'        = 'CST'
-        'APS-MT'     = 'MST'
-        'APS-TO'     = 'MST'
-        'PNM'        = 'MST'
-        'SRP-STF'    = 'MST'
-        'SRP-TGO '   = 'MST'
-        'UMPA'       = 'MST'
-        'APU'        = 'PST'
-        'Avista'     = 'PST'
-        'BPA'        = 'PST'
-        'CDWR'       = 'PST'
-        'DTE'        = 'PST'
-        'IID'        = 'PST'
-        'LADWP'      = 'PST'
-        'NVE-MT'     = 'PST'
-        'PacGas'     = 'PST'
-        'PacifiCorp' = 'PST'
-        'PortGen'    = 'PST'
-        'PSE-MT'     = 'PST'
-        'PSE-TO'     = 'PST'
-        'SDCP'       = 'PST'
-        'SDGE-MT'    = 'PST'
-        'SMUD'       = 'PST'
-        'TPU'        = 'PST'
-        'TID'        = 'PST'
-        'Xcel'       = 'PST'
+        'Shell'     = 'CST'
+        'RWE'       = 'CST'
+        'APS-MT'    = 'MST'
+        'APS-TO'    = 'MST'
+        'PNM-BO'    = 'MST'
+        'PNM-EESC'  = 'MST'
+        'PNM-PRSC'  = 'MST'
+        'SRP-STF'   = 'MST'
+        'SRP-TGO'   = 'MST'
+        'UMPA-MT'   = 'MST'
+        'APU'       = 'PST'
+        'AVISTA-MT' = 'PST'
+        'AVISTA-TO' = 'PST'
+        'BEPC'      = 'PST'
+        'BPA'       = 'PST'
+        'CDWR'      = 'PST'
+        'DTEET'     = 'PST'
+        'IID'       = 'PST'
+        'LADWP-MT'  = 'PST'
+        'NVE-MT'    = 'PST'
+        'PacGas'    = 'PST'
+        'PAC'       = 'PST'
+        'PGE-GOS'   = 'PST'
+        'PGE-TOS'   = 'PST'
+        'PSE-MT'    = 'PST'
+        'PSE-TO'    = 'PST'
+        'P66-MT'    = 'PST'
+        'SDCP'      = 'PST'
+        'SDGE-MT'   = 'PST'
+        'SMUD'      = 'PST'
+        'TPU-MT'    = 'PST'
+        'TID'       = 'PST'
+        'Xcel'      = 'PST'
     }
 
     $timezoneMap = @{
@@ -135,15 +141,15 @@ function loadOracle {
     # Verify previous run of install.bat
     if (!(test-path 'C:\oracle\odp.net\')) {
         if (!(test-path -type leaf $ora12local)) {
-            Write-Warn "ODP assembly not found. Attempting to install ODP managed drivers"
+            Write-Warn "ODP assembly not found"
+            Write-Info "Installing ODP managed drivers..."
             &cmd /c "cd $odpInstall && $odpInstallbat $odpInstallParam1 $odpInstallParam2 $odpInstallParam3" | Out-Null
         }
     }
 	
     if (test-path -type leaf $ora12local) {
         Add-Type -Path $ora12local
-        Write-Info "ODP assembly loaded:"
-        Write-Info "$ora12local"
+        Write-Success "ODP assembly loaded"
     }
     else {
         throw "Cannot find $ora12local to load"
@@ -250,7 +256,7 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
         $deploy = $xml.domain.server.InsertAfter($newNode9, $xml.domain.server['custom-trust-key-store-type'])
 
         $saveit = 1
-        Write-Success "SSL block added to config.xml"
+        Write-Success "SSL block added"
     }
     else {
         Write-Info "SSL already in WebLogic config.xml"
@@ -268,14 +274,14 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
         $xml.domain.'mail-session'.'jndi-name' = 'GPMailSession'
         $xml.domain.'mail-session'.properties = "debug=true;mail.transport.protocol=SMTP;mail.user=PCI_Support;mail.host=365mail.powercosts.com;mail.store.protocol=POP3";
         $saveit = 1
-        Write-Success "Mail block added to config.xml"
+        Write-Success "Mail block added"
     }
     else {
         Write-Info "Mail block already in Weblogic config.xml"
     }
 	
     if ($saveit -ne 0) { 
-        Write-Info "Backing up existing weblogic config.xml"
+        Write-Info "Backing up existing weblogic config.xml..."
         $dateTime = (get-date).ToString("yyyy-MM-dd_HHmm")
         $fileBackup = Join-Path (Split-Path $file) "config.xml.bakup_$dateTime"
         Copy-Item $file $fileBackup
@@ -361,7 +367,7 @@ function Restart-ServiceSafely {
         Write-Success "Service stopped (after ${elapsed}s)"
     }
     else {
-        Write-Warn "$ServiceName was already stopped, skipping stop phase"
+        Write-Warn "$ServiceName already stopped"
     } 
 
     # START
