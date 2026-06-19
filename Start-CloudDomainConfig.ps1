@@ -170,7 +170,7 @@ function Find-ClientMatches {
 if (-not $runningFromApp) {
     $client = $null
     do {
-        $raw = (Prompt-NotEmpty '  Enter Client name (e.g. PAC, PSE-MT, NVE-MT)').Trim()
+        $raw = (Prompt-NotEmpty '  Enter Client name (e.g. OGE, PSE, RWE)').Trim()
         $upper = $raw.ToUpper()
 
         $exactMatch = $validClients | Where-Object { $_.ToUpper() -eq $upper }
