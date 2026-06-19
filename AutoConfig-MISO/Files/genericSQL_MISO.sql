@@ -194,7 +194,9 @@ BEGIN
 	UPDATE SPARAMETER SET VALUE = '903dc31d4a60476282f87fa979c3dc7e' WHERE SYSTEM = 'ISOCOMM' and TYPE = '_MISO_' and NAME = 'DATA_EXCHANGE_PRICING_API_KEY';
 
 	UPDATE SPARAMETER SET VALUE = 'PCI Cloud Environment' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'ENVIRONMENT';
-
+	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/logo-white-on-clear-bg.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO';
+	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/logo-white-on-clear-bg.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO_DARK';
+	
 	UPDATE SPARAMETER SET VALUE = 'gsms' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_CONNECT';
 	UPDATE SPARAMETER SET VALUE = 'pci' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_PASSWORD';
 	UPDATE SPARAMETER SET VALUE = 'pci' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_USER';
