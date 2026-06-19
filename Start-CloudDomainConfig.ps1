@@ -137,6 +137,10 @@ if (-not $runningFromApp) {
     } while ($market -notin $validMarkets)
 }
 
+$keystoreMarkets = @('CAISO', 'ERCOT')
+$marketUsesKeystore = $market -in $keystoreMarkets
+
+# CAISO only:
 $noSettlementsClients = @(
     'AVISTA-TO',
     'SMUD',
@@ -148,7 +152,7 @@ $certFolder = if ($market -eq 'CAISO') { 'CAISO-Settlements' } else { $market }
 
 # Load canonical client list from file
 if (-not $runningFromApp) {
-    $validClients = Get-Content "$PSScriptRoot\clients.txt" | Where-Object { $_.Trim() -ne '' } | ForEach-Object { $_.Trim() }
+    $validClients = Get-Content "$PSScriptRoot\Clients\${market}.txt" | Where-Object { $_.Trim() -ne '' } | ForEach-Object { $_.Trim() }
 }
 
 # Valid clients and input validation
@@ -227,19 +231,69 @@ Write-Host ''
 
 Write-Step 'Validating NAS3 paths'
 
-$skipSettlements = $market -eq 'CAISO' -and $noSettlementsClients -contains $client
+$skipSftpCerts = $market -eq 'CAISO' -and ($noSettlementsClients -contains $client)
 
-if ($skipSettlements) {
+if ($skipSftpCerts) {
     Write-Info "${client}: CAISO Settlements not applicable. SFTP certs not required"
 }
-else {
+elseif (-not $marketUsesKeystore) {
+    # Non-keystore markets: validate cert directory and collect all files
     if (-not (Test-Path $certSourcePath)) {
         Write-Fail "Cert folder not found: $certSourcePath"
         Write-Warn "Check that Market and Client names are correct"
         exit 1
     }
-    else {
-        Write-Success "Cert folder found: $certSourcePath"
+    Write-Success "Cert folder found: $certSourcePath"
+
+    $certFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue
+
+    if ($certFiles.Count -eq 0) {
+        Write-Fail "No cert files found in: $certSourcePath"
+        Write-Warn "Check that the cert directory is populated for $market\$client"
+        exit 1
+    }
+    Write-Success "$($certFiles.Count) file(s) found in cert folder:"
+    foreach ($f in $certFiles) {
+        Write-Info "  - $($f.Name)"
+    }
+}
+else {
+    Write-Info "${market}: Keystore transfer handled by market script"
+}
+
+# CAISO: validate SFTP cert path only when settlements apply
+if ($market -eq 'CAISO' -and -not $skipSftpCerts) {
+    if (-not (Test-Path $certSourcePath)) {
+        Write-Fail "SFTP cert folder not found: $certSourcePath"
+        Write-Warn "Check that Market and Client names are correct"
+        exit 1
+    }
+    Write-Success "SFTP cert folder found: $certSourcePath"
+
+    $allFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue
+    $certFiles = $allFiles | Where-Object {
+        $name = $_.Name
+        $CERT_EXTENSIONS | Where-Object { $name -like $_ }
+    }
+
+    $ppkBasenames = $allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName }
+    $txtBasenames = $allFiles | Where-Object { $_.Extension -eq '.txt' } | ForEach-Object { $_.BaseName }
+    $matchingBasenames = ($ppkBasenames + $txtBasenames) | Sort-Object -Unique
+
+    $extensionlessFiles = $allFiles | Where-Object {
+        $_.Extension -eq '' -and $_.BaseName -in $matchingBasenames
+    }
+
+    $certFiles = @(@($certFiles) + @($extensionlessFiles) | Sort-Object Name -Unique)
+
+    if ($certFiles.Count -eq 0) {
+        Write-Fail "No SFTP cert files found in: $certSourcePath"
+        Write-Warn "Expected extensions: pfx, p12, ppk, cer, crt, txt"
+        exit 1
+    }
+    Write-Success "$($certFiles.Count) SFTP cert file(s) found:"
+    foreach ($f in $certFiles) {
+        Write-Info "  - $($f.Name)"
     }
 }
 
@@ -256,40 +310,6 @@ if (-not (Test-Path $sqlSourcePath)) {
     exit 1
 }
 Write-Success "SQL file found: $sqlSourcePath"
-
-if (-not $skipSettlements) {
-    # Collect cert files
-    $allFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue
-
-    # Files matching explicit extensions
-    $certFiles = $allFiles | Where-Object {
-        $name = $_.Name
-        $CERT_EXTENSIONS | Where-Object { $name -like $_ }
-    }
-
-    # Get basenames of .ppk ant .txt files, then find matching extensionless companions
-    $ppkBasenames = $allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName }
-    $txtBasenames = $allFiles | Where-Object { $_.Extension -eq '.txt' } | ForEach-Object { $_.BaseName }
-
-    $matchingBasenames = ($ppkBasenames + $txtBasenames) | Sort-Object -Unique
-
-    $extensionlessFiles = $allFiles | Where-Object {
-        $_.Extension -eq '' -and $_.BaseName -in $matchingBasenames
-    }
-
-    # Merge both sets
-    $certFiles = @(@($certFiles) + @($extensionlessFiles) | Sort-Object Name -Unique)
-
-    if ($certFiles.Count -eq 0) {
-        Write-Fail "No cert/credential files found in $certSourcePath"
-        Write-Warn "Expected extensions: pfx, p12, ppk, cer, crt, txt"
-        exit 1
-    }
-    Write-Success "$($certFiles.Count) file(s) found in cert folder:"
-    foreach ($f in $certFiles) {
-        Write-Info "  - $($f.Name)"
-    }
-}
 
 # ─────────────────────────────────────────────
 #  STEP 3 — Test WinRM / WSMan connectivity
@@ -332,13 +352,16 @@ New-Item -ItemType Directory -Path $localTemp -Force | Out-Null
 Write-Success "Local staging folder: $localTemp"
 
 # Copy cert files
-if (-not $skipSettlements) {
+$needsCertStaging = (-not $marketUsesKeystore) -or ($market -eq 'CAISO' -and -not $skipSftpCerts)
+$stagingLabel = if ($market -eq 'CAISO') { 'SFTP cert' } else { 'cert' }
+
+if ($needsCertStaging) {
     $localCertsDir = Join-Path $localTemp 'Certs'
     New-Item -ItemType Directory -Path $localCertsDir -Force | Out-Null
     foreach ($f in $certFiles) {
         Copy-Item -Path $f.FullName -Destination $localCertsDir
     }
-    Write-Success "Copied $($certFiles.Count) cert file(s) to staging"
+    Write-Success "Copied $($certFiles.Count) ${stagingLabel} file(s) to staging"
 }
 
 # Copy AutoConfig folder
@@ -383,14 +406,23 @@ try {
     } -ArgumentList $VM_TEMP_DIR
     Write-Success "Temp directory ready on VM"
 
-    if (-not $skipSettlements) {
-        # Transfer cert files
+    if (-not $marketUsesKeystore) {
+        # Non-keystore markets: transfer all collected cert files
         Write-Step "Transferring cert files to VM"
         Copy-Item -Path "$localCertsDir\*" `
             -Destination "$VM_TEMP_DIR\Certs" `
             -ToSession $session `
             -Force
         Write-Success "Cert files transferred"
+    }
+    elseif ($market -eq 'CAISO' -and -not $skipSftpCerts) {
+        # CAISO: transfer SFTP settlement certs when applicable
+        Write-Step "Transferring CAISO SFTP certs to VM"
+        Copy-Item -Path "$localCertsDir\*" `
+            -Destination "$VM_TEMP_DIR\Certs" `
+            -ToSession $session `
+            -Force
+        Write-Success "SFTP cert files transferred"
     }
 
     # Transfer AutoConfig folder
