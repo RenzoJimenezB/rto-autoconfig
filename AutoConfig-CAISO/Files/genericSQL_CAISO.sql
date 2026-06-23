@@ -10,38 +10,31 @@ BEGIN
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Download' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'DOWNLOAD_DIRECTORY';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Settlements\Download' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'INVOICE_LOAD_DIRECTORY';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Bid_Status' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'MERCHANT_TO_ENTITY_SHARE';
-
 	UPDATE SPARAMETER SET VALUE = 'T' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'OMS_MODE';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\CAISOEIM.keystore' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'OMS_TRUSTSTORE';
 	UPDATE SPARAMETER SET VALUE = 'caisoteam' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'OMS_TRUSTSTOREPASSWORD';
-
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Settlements\Archive' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'SETTLEMENT_ARCHIVE_DIRECTORY';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Settlements\Download' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'SETTLEMENT_DOWNLOAD_DIRECTORY';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Settlements\Historic' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'SETTLEMENT_HISTORIC_DIRECTORY';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Settlements\Upload' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'STATEMENT_LOAD_DIRECTORY';
-
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\CAISOEIM.keystore' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'TRUST_STORE';
 	UPDATE SPARAMETER SET VALUE = 'caisoteam' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'TRUST_STORE_PASSWORD';
-	
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Upload' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'UPLOAD_DIRECTORY';
-	
 	UPDATE SPARAMETER SET VALUE = 'N' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'USE_MODE';
 
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Import_Datafeed\Import_Files\Load_Forecast\Archive' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'ARCHIVE_DIRECTORY';
+	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Import_Datafeed\ETL_Export_Latest' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'ETL_EXPORT_LATEST';
+	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Exports' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'EXPORT_FILES';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Import_Datafeed\Import_Files' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'IMPORT_FILES';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Import_Datafeed\IT_Datafeed_Files' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'IT_DATAFEED_FILES';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Import_Datafeed\IT_Datafeed_Files\WACOG' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'IT_DATAFEED_FILES_WACOG';
-	
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Bid_Status' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'M_TO_E';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Exports' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'OBJ_STORE_PATH';
 	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Exports' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'RTP.OBJ_STORE_PATH';
 
 	UPDATE SPARAMETER SET VALUE = 'PCI Cloud Environment' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'ENVIRONMENT';
-	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/pcilogo.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO';
-	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/pcilogo.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO_DARK';
-
-	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Import_Datafeed\ETL_Export_Latest' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'ETL_EXPORT_LATEST';
-	UPDATE SPARAMETER SET VALUE = 'C:\CAISO\Exports' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'EXPORT_FILES';
+	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/logo-white-on-clear-bg.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO';
+	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/logo-white-on-clear-bg.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO_DARK';
 
 	UPDATE SPARAMETER SET VALUE = 'gsms' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_CONNECT';
 	UPDATE SPARAMETER SET VALUE = 'pci' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_PASSWORD';
