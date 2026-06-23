@@ -61,7 +61,7 @@ $VM_DOMAIN_SUFFIX = '.cloud.pci'
 $VM_TEMP_DIR = 'C:\Temp\CloudDomainConfig'   # temp dir created on the VM
 
 # Extensions to copy from the client cert folder
-$CERT_EXTENSIONS = @('*.pfx', '*.p12', '*.ppk', '*.cer', '*.crt', '*.id', '*.txt')
+$CERT_EXTENSIONS = @('.pfx', '.p12', '.ppk', '.cer', '.crt', '.id', '.txt')
 
 # ─────────────────────────────────────────────
 #  HELPER FUNCTIONS
@@ -245,7 +245,9 @@ elseif (-not $marketUsesKeystore) {
     }
     Write-Success "Cert folder found: $certSourcePath"
 
-    $certFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue
+    $certFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue | Where-Object {
+        $_.Extension -in $CERT_EXTENSIONS
+    }
 
     if ($certFiles.Count -eq 0) {
         Write-Fail "No cert files found in: $certSourcePath"
@@ -267,13 +269,13 @@ if ($market -eq 'CAISO' -and -not $skipSftpCerts) {
         Write-Fail "SFTP cert folder not found: $certSourcePath"
         Write-Warn "Check that Market and Client names are correct"
         exit 1
-    }
+    } 
     Write-Success "SFTP cert folder found: $certSourcePath"
 
     $allFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue
+
     $certFiles = $allFiles | Where-Object {
-        $name = $_.Name
-        $CERT_EXTENSIONS | Where-Object { $name -like $_ }
+        $_.Extension -in $CERT_EXTENSIONS
     }
 
     $ppkBasenames = $allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName }
