@@ -272,7 +272,7 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
         $xml.domain.'mail-session'.name = 'GPMailSession'
         $xml.domain.'mail-session'.target = $(hostname).toString().toLower() 
         $xml.domain.'mail-session'.'jndi-name' = 'GPMailSession'
-        $xml.domain.'mail-session'.properties = "debug=true;mail.transport.protocol=SMTP;mail.user=PCI_Support;mail.host=365mail.powercosts.com;mail.store.protocol=POP3";
+        $xml.domain.'mail-session'.properties = "debug=true;mail.transport.protocol=SMTP;mail.user=PCI_Support;mail.host=365mail.powercosts.com_bk;mail.store.protocol=POP3";
         $saveit = 1
         Write-Success "Mail block added"
     }

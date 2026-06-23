@@ -44,8 +44,10 @@ function initFunc_MISO([string]$clientName, [string]$CertDir) {
         New-Item -Path "C:\MISO\$folder" -ItemType Directory -Force | Out-Null
     }
 
+    New-Item -Path "C:\PCI\settlement" -ItemType Directory -Force | Out-Null
+    New-Item -Path "C:\PCI\archive\settlement" -ItemType Directory -Force | Out-Null
+
     Copy-Item (Join-Path $scriptDir "Files\miso.jks") C:\MISO\certs\miso.jks
-    # Copy-Item (Join-Path $scriptDir "Files\Client_CERTS\$clientName\*") C:\MISO\certs -Recurse -Force
     Copy-Item "$CertDir\*" C:\MISO\certs -Recurse -Force
 }
 
@@ -211,7 +213,7 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
         $xml.domain.'mail-session'.name = 'GPMailSession'
         $xml.domain.'mail-session'.target = $(hostname).toString().toLower() 
         $xml.domain.'mail-session'.'jndi-name' = 'GPMailSession'
-        $xml.domain.'mail-session'.properties = "debug=true;mail.transport.protocol=SMTP;mail.user=PCI_Support;mail.host=365mail.powercosts.com;mail.store.protocol=POP3";
+        $xml.domain.'mail-session'.properties = "debug=true;mail.transport.protocol=SMTP;mail.user=PCI_Support;mail.host=365mail.powercosts.com_bk;mail.store.protocol=POP3";
         $saveit = 1
         Write-Success "Mail block added"
     }
