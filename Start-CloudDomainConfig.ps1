@@ -17,6 +17,11 @@
     Created  : 2026-05-25
 #>
 
+# ── Console ───────────────────────────────────────────────────────────────────
+$Host.UI.RawUI.BackgroundColor = 'Black'
+$Host.UI.RawUI.ForegroundColor = 'White'
+Clear-Host
+
 # ── Preflight ─────────────────────────────────────────────────────────────────
 
 # ExecutionPolicy
@@ -269,7 +274,7 @@ if ($market -eq 'CAISO' -and -not $skipSftpCerts) {
         Write-Fail "SFTP cert folder not found: $certSourcePath"
         Write-Warn "Check that Market and Client names are correct"
         exit 1
-    } 
+    }
     Write-Success "SFTP cert folder found: $certSourcePath"
 
     $allFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue
