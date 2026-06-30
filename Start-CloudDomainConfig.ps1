@@ -533,6 +533,6 @@ finally {
 if (-not $runningFromApp) {
     Write-Host ''
     Write-Host '=============================================' -ForegroundColor DarkCyan
-    Write-Host '   Done. Press any key to close.'             -ForegroundColor White
+    Write-Host '   Done. Type exit to close this window.'             -ForegroundColor White
     Write-Host '=============================================' -ForegroundColor DarkCyan
 }
