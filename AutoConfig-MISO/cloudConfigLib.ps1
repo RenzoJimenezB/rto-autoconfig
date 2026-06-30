@@ -37,7 +37,10 @@ function initFunc_MISO([string]$clientName, [string]$CertDir) {
         "download",
         "invoicePDFDisplay",
         "loadStatements",
-        "upload"
+        "upload",
+
+        "crow\archive",
+        "crow\download"
     )
 
     foreach ($folder in $folders) {
