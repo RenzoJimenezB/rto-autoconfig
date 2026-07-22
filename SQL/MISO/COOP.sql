@@ -1,0 +1,13 @@
+UPDATE SASSET_OWNER_CONFIG
+SET
+    CERTIFICATE = 'C:\MISO\certs\pci_smep25-1.pfx',
+    PASSWORD = 'LJ!75b*QF$@XM6',
+    CERT_DETAILS = 'C:\MISO\certs\pci_smep25-1.pfx'
+WHERE ASSET_OWNER_KEY IN (
+    SELECT ASSET_OWNER_KEY FROM SASSET_OWNER
+    WHERE NAME IN (
+        'DELTA EDGE',
+        'MS SOLAR 3',
+        'SMEP'
+    )
+);

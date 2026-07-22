@@ -1,0 +1,19 @@
+UPDATE SASSET_OWNER_CONFIG
+SET
+    CERTIFICATE = 'azpe pci-test 2x23883 (caiso_certificate_authority_issuing)',
+    PASSWORD = 'caisoteam',
+    CERT_DETAILS = 'CN=AZPE PCI-TEST 2x23883,OU=people,O=CAISO,C=US'
+WHERE ASSET_OWNER_KEY IN (
+    SELECT ASSET_OWNER_KEY FROM SASSET_OWNER
+    WHERE NAME IN (
+        'APS5',
+        'ARIZONA',
+        'AZPE',
+        'AZPS_BA',
+        'AZPS_TOP'
+    )
+);
+
+UPDATE SCUSTOM_FIELD SET VALUE = 'C:\CAISO\Settlements\SFTP\azpepciaccess' WHERE NAME = 'AZPE_CERT';
+UPDATE SCUSTOM_FIELD SET VALUE = 'vLV1ia3c' WHERE NAME = 'AZPE_CERT_PASSWORD';
+UPDATE SCUSTOM_FIELD SET VALUE = 'azpepciaccess' WHERE NAME = 'AZPE_SFTP_USER';

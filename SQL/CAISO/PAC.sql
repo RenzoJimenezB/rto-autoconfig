@@ -1,0 +1,23 @@
+UPDATE SASSET_OWNER_CONFIG
+SET
+    CERTIFICATE = 'pac1 pcitestx14505 (caiso_certificate_authority_issuing)',
+    PASSWORD = 'caisoteam',
+    CERT_DETAILS = 'CN=PAC1 PCITESTx14505,OU=people,O=CAISO,C=US'
+WHERE ASSET_OWNER_KEY IN (
+    SELECT ASSET_OWNER_KEY FROM SASSET_OWNER
+    WHERE NAME IN (
+        'MSG2',
+        'PAC1',
+        'PACE',
+        'PACIFICORP',
+        'PACNPM',
+        'PACW'
+    )
+);
+
+UPDATE SASSET_OWNER_CONFIG
+SET 
+    ACTIVE = 'N',
+    SETTLE = 'N',
+    DEFAULT_ASSET_OWNER = 'N'
+WHERE ASSET_OWNER_KEY = (SELECT ASSET_OWNER_KEY FROM SASSET_OWNER WHERE NAME = 'PACNPM');

@@ -1,0 +1,27 @@
+UPDATE SASSET_OWNER_CONFIG
+SET
+    CERTIFICATE = 'pge pci pgeex5796 (caiso_certificate_authority_issuing)',
+    PASSWORD = 'caisoteam',
+    CERT_DETAILS = 'CN=PGE PCI PGEEx5796,OU=people,O=CAISO,C=US'
+WHERE ASSET_OWNER_KEY IN (
+    SELECT ASSET_OWNER_KEY FROM SASSET_OWNER
+    WHERE NAME IN (
+        'PGE_BA',
+        'PGE_TOP',
+        'PGEE',
+        'PORTLAND',
+        'TO104'
+    )
+);
+
+UPDATE SCUSTOM_FIELD
+SET VALUE = 'C:\CAISO\Settlements\SFTP\scpgeepcisftp.ppk'
+WHERE NAME = 'PGEE_CERT';
+
+UPDATE SCUSTOM_FIELD
+SET VALUE = 'Qbxtherx1!'
+WHERE NAME = 'PGEE_CERT_PASSWORD';
+
+UPDATE SCUSTOM_FIELD
+SET VALUE = 'pgeepciaccessserver'
+WHERE NAME = 'PGEE_SFTP_USER';

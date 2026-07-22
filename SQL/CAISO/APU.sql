@@ -1,0 +1,71 @@
+UPDATE SASSET_OWNER_CONFIG
+SET
+    CERTIFICATE  = 'pci-anaheimpu-caiso testx28120 (caiso_certificate_authority_issuing)',
+    PASSWORD     = 'caisoteam',
+    CERT_DETAILS = 'CN=PCI-ANAHEIMPU-CAISO TESTx28120,OU=people,O=CAISO,C=US'
+WHERE ASSET_OWNER_KEY IN (
+    SELECT ASSET_OWNER_KEY FROM SASSET_OWNER
+    WHERE NAME IN (
+        'ANA1',
+        'ANA2',
+        'ANHM',
+        'BOWR',
+        'KARN',
+        'MWD1',
+        'RGWD',
+        'SGWF',
+        'TO09',
+        'WSLR'
+    )
+);
+
+UPDATE SCUSTOM_FIELD
+SET VALUE = 'C:\CAISO\Settlements\SFTP\anhmSFTPbackoffice.ppk'
+WHERE NAME IN (
+    'ANA1_CERT',
+    'ANA2_CERT',
+    'ANH1_CERT',
+    'ANH2_CERT',
+    'ANHM_CERT',
+    'BOWR_CERT',
+    'KARN_CERT',
+    'MWD1_CERT',
+    'RGWD_CERT',
+    'SGWF_CERT',
+    'TO09_CERT',
+    'WSLR_CERT'
+);
+
+UPDATE SCUSTOM_FIELD
+SET VALUE = 'NancyLe'
+WHERE NAME IN (
+    'ANA1_CERT_PASSWORD',
+    'ANA2_CERT_PASSWORD',
+    'ANH1_CERT_PASSWORD',
+    'ANH2_CERT_PASSWORD',
+    'ANHM_CERT_PASSWORD',
+    'BOWR_CERT_PASSWORD',
+    'KARN_CERT_PASSWORD',
+    'MWD1_CERT_PASSWORD',
+    'RGWD_CERT_PASSWORD',
+    'SGWF_CERT_PASSWORD',
+    'TO09_CERT_PASSWORD',
+    'WSLR_CERT_PASSWORD'
+);
+
+UPDATE SCUSTOM_FIELD
+SET VALUE = 'anhmSFTPbackoffice'
+WHERE NAME IN (
+    'ANA1_SFTP_USER',
+    'ANA2_SFTP_USER',
+    'ANH1_SFTP_USER',
+    'ANH2_SFTP_USER',
+    'ANHM_SFTP_USER',
+    'BOWR_SFTP_USER',
+    'KARN_SFTP_USER',
+    'MWD1_SFTP_USER',
+    'RGWD_SFTP_USER',
+    'SGWF_SFTP_USER',
+    'TO09_SFTP_USER',
+    'WSLR_SFTP_USER'
+);

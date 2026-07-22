@@ -1,0 +1,133 @@
+UPDATE suser
+SET u_password = 'gtwp$pci1'
+WHERE u_name IN ('Admin','background');
+
+UPDATE SPARAMETER
+SET "VALUE" = 'gtwp$pci1'
+WHERE "NAME" = 'BACKGROUND_PASSWORD';
+
+UPDATE SPARAMETER
+SET VALUE = 'C:\PCI\Archive'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'SPPIM'
+and NAME = 'ARCHIVE_DIRECTORY';
+
+UPDATE SPARAMETER
+SET VALUE = 'C:\PCI\AutoUpload'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'SPPIM'
+and NAME = 'AUTO_UPLOAD_DIRECTORY';
+
+UPDATE SPARAMETER
+SET VALUE = 'C:\PCI\certificates'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'SPPIM'
+and NAME = 'CERTS_DIRECTORY';
+
+UPDATE SPARAMETER
+SET VALUE = 'C:\PCI\Download'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'SPPIM'
+and NAME = 'DOWNLOAD_DIRECTORY';
+
+UPDATE SPARAMETER
+-- domain specific
+SET VALUE = 'C:\PCI\Archive'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'SPPIM'
+and NAME = 'SETTLEMENT_ARCHIVE_DIRECTORY';
+
+UPDATE SPARAMETER
+--domain specific
+SET VALUE = 'C:\PCI\Statements'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'SPPIM'
+and NAME = 'STATEMENT_LOAD_DIRECTORY';
+
+UPDATE SPARAMETER
+SET VALUE = 'C:\PCI\Upload'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'SPPIM'
+and NAME = 'UPLOAD_DIRECTORY';
+
+UPDATE SPARAMETER
+SET VALUE = 'A'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'SPPIM'
+and NAME = 'USE_MODE';
+
+UPDATE SPARAMETER
+SET VALUE = 'C:\PCI\certificates\sppim_2017.JKS'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'SPPIM'
+and NAME = 'TRUST_STORE';
+
+UPDATE SPARAMETER
+SET VALUE = 'changeit'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'SPPIM'
+and NAME = 'TRUST_STORE_PASSWORD';
+
+UPDATE SPARAMETER
+SET VALUE = 'C:\iso_messages\archive'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'ISO'
+and NAME = 'CACHER_ARCHIVE_ROOT_DIR';
+
+UPDATE SPARAMETER
+SET VALUE = 'C:\iso_messages'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'ISO'
+and NAME = 'CACHER_ROOT_PATH';
+
+UPDATE SPARAMETER
+SET VALUE = 'sppim'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'ISO'
+and NAME = 'CACHER_ISO_PATH';
+
+UPDATE SPARAMETER
+SET VALUE = 'Prod'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'ISO'
+and NAME = 'CACHER_SERVER_PATH';
+
+UPDATE SPARAMETER
+SET VALUE = 'Admin'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'ISO'
+and NAME = 'USER_NAME';
+
+UPDATE SPARAMETER
+SET VALUE = 'gtwp'
+WHERE SYSTEM = 'GenManager'
+and TYPE = 'ISO'
+and NAME = 'USER_PASSWORD';
+
+UPDATE SPARAMETER
+SET VALUE = 'PCI'
+WHERE SYSTEM = 'GenPortal'
+and TYPE = '_SYSTEM_'
+and NAME = 'PORTAL_LOGO';
+
+UPDATE SPARAMETER
+SET VALUE = 'PCI'
+WHERE SYSTEM = 'GenPortal'
+and TYPE = '_SYSTEM_'
+and NAME = 'PORTAL_LOGO_DARK';
+
+-- This needs to be updated per client
+
+UPDATE SASSET_OWNER_CONFIG
+SET CERTIFICATE = 'C:\PCI\certificates\Client_Certificates\AECC\PCI-AECC Support-Expires-2026-01-05.pfx',
+PASSWORD = 'b3PHf$hefM9PCYMzl4#cv';
+
+-- User1 is Prod's screen name, User2 is Prod's API KEY, User3 is MTE's screen name, User4 is MTE's API KEY
+
+UPDATE SASSET_OWNER_CONFIG
+SET USER1 = 'EX000001633',
+USER2 = 'Lyc9rZjtvEHYbnQn9ljLa9izEvp7Tcg/c6//9eJowDBfzkV0YruTEZ53rZK59ClzlhrWz5FtzQJ6dhCR0pv0wQ==',
+USER3 = 'EX000000493',
+USER4 = '7X087HXdZ0WBG58hBQ6rntccw/hgvv+IWdkK5kbFnuR42fjpNPfLLU38CaZiloVMoqN5jQVcNzRiCUTS4hFOTw==',
+USER5 = 'C:\PCI\certificates\Client_Certificates\AECC\PCI-AECC Support-Expires-2026-01-05.pfx',
+USER6 = 'b3PHf$hefM9PCYMzl4#cv';
