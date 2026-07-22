@@ -1,7 +1,7 @@
 <##
 ==============================================================================================
  Microsoft PowerShell Source File
- NAME:				Configure_Domain.ps1
+ NAME:				Configure_Domain.ps1 & cloudConfigLib.ps1
 
  AUTHOR:			Renzo Jimenez
 

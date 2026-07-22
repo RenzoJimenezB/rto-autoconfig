@@ -40,7 +40,7 @@ function initFunc_SPPIM([string]$clientName, [string]$CertDir) {
         "settlement\archiveStatements",
         "settlement\invoices",
         "settlement\misc_Statements",
-        "settlement\statements"
+        "settlement\statements",
         "upload\auto"
     )
 

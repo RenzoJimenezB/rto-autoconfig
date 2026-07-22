@@ -283,12 +283,12 @@ if ($market -eq 'CAISO' -and -not $skipSftpCerts) {
         $_.Extension -in $CERT_EXTENSIONS
     }
 
-    $ppkBasenames = $allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName }
-    $txtBasenames = $allFiles | Where-Object { $_.Extension -eq '.txt' } | ForEach-Object { $_.BaseName }
-    $matchingBasenames = ($ppkBasenames + $txtBasenames) | Sort-Object -Unique
+    $ppkBasenames = @($allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName })
+    $txtBasenames = @($allFiles | Where-Object { $_.Extension -eq '.txt' } | ForEach-Object { $_.BaseName })
+    $basenamesToCheck = @($ppkBasenames) + @($txtBasenames) | Sort-Object -Unique
 
     $extensionlessFiles = $allFiles | Where-Object {
-        $_.Extension -eq '' -and $_.BaseName -in $matchingBasenames
+        $_.Extension -eq '' -and $_.BaseName -in $basenamesToCheck
     }
 
     $certFiles = @(@($certFiles) + @($extensionlessFiles) | Sort-Object Name -Unique)

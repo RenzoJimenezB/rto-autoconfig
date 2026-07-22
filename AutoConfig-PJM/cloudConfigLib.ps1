@@ -1,4 +1,6 @@
-# Common Init Functions
+# ─────────────────────────────────────────────
+#  Common Init
+# ─────────────────────────────────────────────
 function initFunc_Common {
     New-Item -Path C:\PCI\trust\$domainName -ItemType Directory -Force | Out-Null
     New-Item -Path C:\PCI-Updates\GM\custom\$domainName\applications\GenPortal.ear\APP-INF\classes -ItemType Directory -Force | Out-Null
@@ -17,48 +19,56 @@ function initFunc_Common {
     Copy-Item $connectionsJsonPath "C:\Users\Administrator\AppData\Roaming\SQL Developer\$($cnct.Name)\o.jdeveloper.db.connection\connections.json"
 }
 
-# Market Load Functions
+# ─────────────────────────────────────────────
+#  Market Init — PJM
+# ─────────────────────────────────────────────
 function initFunc_PJM([string]$clientName, [string]$CertDir) {
     Set-TimeZone -Name 'Eastern Standard Time'
-    Write-Host "The server timezone is now being set to EST"
+    Write-Info "Server timezone set to EST"
 
-    $scriptDir
-
-    $folders = @(
-        "archive"
+    $pciFolders = @(
+        "archive",
+        "certificates",
+        
+        "certificates\pki"
     )
 
-    if (!(Test-Path "C:\FileFolders")) {
-        Copy-Item "$scriptRoot\Domain_Files\FileFolders" `
-            -Destination "C:\FileFolders" -Recurse -Force
-    }
-
-    if (!(Test-Path "C:\PJM")) {
-        Copy-Item "$scriptRoot\Domain_Files\PJM" `
-            -Destination "C:\PJM" -Recurse -Force
-    }
-
-    foreach ($folder in $folders) {
+    foreach ($folder in $pciFolders) {
         New-Item -Path "C:\PCI\$folder" -ItemType Directory -Force | Out-Null
     }
 
-    $pkiSource = Join-Path $scriptRoot "Client_Certificates\$clientName"
-    $pkiTarget = "C:\PCI\certificates\pki"
+    $pjmFolders = @(
+        "archive",
+        "auto",
+        "download",
+        "download2",
+        "invoices",
+        "settlements",
+        "uplpoad",
+        "uploadAuto",
 
-    if (!(Test-Path $pkiSource)) {
-        Write-Host "[ERR] PKI source directory not found: $pkiSource" -ForegroundColor Red
-        exit
+        "invoices\invoiceDownload",
+        "invoices\pdfDisplay",
+        "invoices\pdfDownload",
+
+        "settlements\archive",
+        "settlements\download",
+        "settlements\download2",
+        "settlements\statementLoad",
+        "settlements\statements"
+    )
+
+    foreach ($folder in $pjmFolders) {
+        New-Item -Path "C:\PJM\$folder" -ItemType Directory -Force | Out-Null
     }
 
-    if (!(Test-Path $pkiTarget)) {
-        New-Item -Path $pkiTarget -ItemType Directory -Force | Out-Null
-    }
-
-    Write-Host "[NFO] Copying PJM PKI certificates for client [$clientName]" -ForegroundColor Yellow
-    Copy-Item "$pkiSource\*" -Destination $pkiTarget -Force
+    Copy-Item (Join-Path $scriptDir "Files\PCIKEY.keystore") C:\PJM\PCIKEY.keystore
+    Copy-Item "$CertDir\*" C:\PCI\certificates\pki -Recurse -Force
 }
 
-# Weblogic Functions 
+# ─────────────────────────────────────────────
+#  WebLogic — Load Oracle ODP
+# ───────────────────────────────────────────── 
 function loadOracle {
     # Load Function Library & Assembly files: 										   
     Param([Parameter(Mandatory = $false)][switch]$wlpwd)
@@ -80,32 +90,32 @@ function loadOracle {
         [System.IO.Compression.ZipFile]::ExtractToDirectory($odpZip, $odpTarget)
         #verify extraction: 
         if (!(test-path -type leaf 'C:\Oracle_ODP_Install\install_odpm.bat')) {
-            Write-Host "[ERR] Extract failed! Check drive space and permissions" -Foregroundcolor Red
-            exit 1 
+            throw 'ODP extraction failed. Check drive space and permissions'
         }
     }
 	
-    #verify previous run of install.bat
+    # Verify previous run of install.bat
     if (!(test-path 'C:\oracle\odp.net\')) {
         if (!(test-path -type leaf $ora12local)) {
-            Write-Host "[WRN] ODP assembly not found. Attempting to install ODP managed drivers" -Foregroundcolor Yellow
-            &cmd /c "cd $odpInstall && $odpInstallbat $odpInstallParam1 $odpInstallParam2 $odpInstallParam3"
+            Write-Warn "ODP assembly not found"
+            Write-Info "Installing ODP managed drivers..."
+            &cmd /c "cd $odpInstall && $odpInstallbat $odpInstallParam1 $odpInstallParam2 $odpInstallParam3" | Out-Null
         }
     }
 	
     if (test-path -type leaf $ora12local) {
         Add-Type -Path $ora12local
-        $assemblyFile = $ora12local
-        return $assemblyFile			
+        Write-Success "ODP assembly loaded"
     }
     else {
-        Write-Host "[ERR] Cannot find $ora12local to load. Exiting."  -Foregroundcolor Red
-        exit 1
+        throw "Cannot find $ora12local to load"
     }
 }
 
+# ─────────────────────────────────────────────
+#  WebLogic — Environment
+# ─────────────────────────────────────────────
 function getEnv {
-    #Get domain path, get WL path. Start setting variables like what the wlsetENV.bat file does... 
     $imagePath = (Get-ItemProperty HKLM:\SYSTEM\CurrentControlSet\services\PCI_GM_$domainName | Select-Object -ExpandProperty ImagePath)
     $serverBinPath = Split-Path $imagePath
     $serverPath = $imagePath -replace "\\server\\bin\\wlsvcX64.exe", ""
@@ -136,7 +146,6 @@ function getEnv {
 }
 
 function setWLEnv([string]$wlServerBinPath) {
-    Write-Host "[NFO] Setting WL environment..." -Foregroundcolor Yellow
     & "$wlServerBinPath\setWLSEnv.cmd" | Out-Null
 }
 
@@ -151,20 +160,19 @@ function wl_encrypt_pw ([string]$javaPath, [string]$encryptme) {
     return $encryptedPW
 }
 
+# ─────────────────────────────────────────────
+#  WebLogic — config.xml SSL + Mail
+# ─────────────────────────────────────────────
 function wl_config_modify($file, $jksFile, $enc_pw) {
     if (!(($file) -or ($jksFile) -or ($enc_pw))) {
-        Write-Host "[ERR] Missing a SSL input. Exiting." -Foregroundcolor Red
-        exit
+        throw 'Missing a SSL input'
     }
 
-    Write-Host "[NFO] Modifying Weblogic config.xml" -Foregroundcolor Yellow
-    Write-Host 
     $saveit = 0
     $xml = [xml](Get-Content $file)
     $encrypter_value = $enc_pw 
 	
     if (!(($xml.domain.server.ssl.enabled.ToString()) -eq 'true')) {	
-        Write-Host "[NFO] Attempting to add SSL block" -Foregroundcolor Yellow
         $xml.domain.server.ssl.enabled = 'true'
 	
         $newNode1 = $xml.CreateElement("listen-port", "http://xmlns.oracle.com/weblogic/domain")
@@ -204,16 +212,13 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
         $deploy = $xml.domain.server.InsertAfter($newNode9, $xml.domain.server['custom-trust-key-store-type'])
 
         $saveit = 1
-        Write-Host "[SUC] Modified SSL block in Weblogic config.xml" -Foregroundcolor Green
-        Write-Host 
+        Write-Success "SSL block added"
     }
     else {
-        Write-Host "[NFO] SSL already in Weblogic config.xml" -Foregroundcolor Yellow
-        Write-Host 
+        Write-Info "SSL already in WebLogic config.xml"
     }
 	
     if (!($xml.domain['mail-session'])) {	
-        Write-Host "[NFO] Attempting to add mail block" -Foregroundcolor Yellow
         $xmlMail = $xml.CreateElement("mail-session", "http://xmlns.oracle.com/weblogic/domain");
         $deploy = $xml.domain.InsertAfter($xmlMail, $xml.domain.jmx)
         $newXmlNameElement = $xmlMail.AppendChild($xml.CreateElement("name", "http://xmlns.oracle.com/weblogic/domain"));
@@ -223,18 +228,16 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
         $xml.domain.'mail-session'.name = 'GPMailSession'
         $xml.domain.'mail-session'.target = $(hostname).toString().toLower() 
         $xml.domain.'mail-session'.'jndi-name' = 'GPMailSession'
-        $xml.domain.'mail-session'.properties = "debug=true;mail.transport.protocol=SMTP;mail.user=PCI_Support;mail.host=365mail.powercosts.com;mail.store.protocol=POP3";
+        $xml.domain.'mail-session'.properties = "debug=true;mail.transport.protocol=SMTP;mail.user=PCI_Support;mail.host=365mail.powercosts.com_bk;mail.store.protocol=POP3";
         $saveit = 1
-        Write-Host "[SUC] Modified mail block in Weblogic config.xml" -Foregroundcolor Green	
-        Write-Host 
+        Write-Success "Mail block added"
     }
     else {
-        Write-Host "[NFO] Mail block already in Weblogic config.xml" -Foregroundcolor Yellow
-        Write-Host 
+        Write-Info "Mail block already in Weblogic config.xml"
     }
 	
     if ($saveit -ne 0) { 
-        Write-Host "[NFO] Backing up existing weblogic config.xml" -Foregroundcolor Yellow
+        Write-Info "Backing up existing weblogic config.xml..."
         $dateTime = (get-date).ToString("yyyy-MM-dd_HHmm")
         $fileBackup = Join-Path (Split-Path $file) "config.xml.bakup_$dateTime"
         Copy-Item $file $fileBackup
@@ -249,12 +252,13 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
         $v = get-content $file -raw
         (($v -replace '\s{4}[<]plan-staging-mode xsi:nil="true"[>\r\n]\s+[<][/]plan-staging-mode[>]', '    <plan-staging-mode xsi:nil="true"></plan-staging-mode>')) | set-content -Path $file
 	
-        Write-Host "[SUC] Weblogic config.xml modified" -Foregroundcolor Green
-        Write-Host 		
+        Write-Success "Weblogic config.xml modified"
     }
 }
 
-# SQL Functions 
+# ─────────────────────────────────────────────
+#  SQL Helpers
+# ─────────────────────────────────────────────
 function buildjdbc {
     #Build JDBC Connect String: 
     $jdbc = (get-content $env:APPHOME\config\jdbc\GTDW-8080-jdbc.xml | 
@@ -269,22 +273,18 @@ function buildjdbc {
     }
 }
 
-function genericSQL($market) {
+function genericSQL([string]$Market) {
     $genericSQLPath = Join-Path $scriptDir "Files\genericSQL_$market.sql"
     if (!(Test-Path $genericSQLPath)) {
-        Write-Host "[ERR] Missing generic SQL file: $genericSQLPath" -ForegroundColor Red
-        exit 1
+        throw "Missing generic SQL file: $genericSQLPath"
     }
     return (Get-Content -Path $genericSQLPath -Raw)
 }
 
-function clientSQL([string]$Market, [string]$SqlFilePath) {
+function clientSQL([string]$SqlFilePath) {
     if (-not (Test-Path $SqlFilePath)) {
-        Write-Host "[ERR] Client SQL file not found: $SqlFilePath" -Foregroundcolor Red
-        exit 1
+        throw "Client SQL file not found: $SqlFilePath"
     }
-
-    Write-Host "[NFO] Using client SQL: $(Split-Path $SqlFilePath -Leaf)" -ForegroundColor Yellow
     $sql = Get-Content -Path $SqlFilePath -Raw
     return @"
 BEGIN	
@@ -292,4 +292,46 @@ $sql
 COMMIT; 
 END;
 "@
+}
+
+# ─────────────────────────────────────────────
+#  Service Helpers
+# ─────────────────────────────────────────────
+function Restart-ServiceSafely {
+    param(
+        [string]$ServiceName,
+        [int]$StopTimeoutSec = 30,
+        [int]$StartTimeoutSec = 30
+    )
+
+    $currentStatus = (Get-Service $ServiceName).Status
+
+    # STOP
+    Write-Step "Stopping $ServiceName..."
+
+    if ($currentStatus -ne 'Stopped') {
+        Stop-Service $ServiceName -ErrorAction Stop
+
+        $elapsed = 0
+        while ((Get-Service $ServiceName).Status -ne 'Stopped') {
+            if ($elapsed -ge $StopTimeoutSec) {
+                throw "$ServiceName failed to stop after ${StopTimeoutSec}s"
+            }
+            Start-Sleep -Seconds 2
+            $elapsed += 2
+        }
+        Write-Success "Service stopped (after ${elapsed}s)"
+    }
+    else {
+        Write-Warn "$ServiceName already stopped"
+    } 
+
+    # START
+    Write-Step "Starting $ServiceName..."
+    
+    $startTime = Get-Date
+    Start-Service $ServiceName -ErrorAction Stop -WarningAction SilentlyContinue
+
+    $elapsed = [int](New-TimeSpan -Start $startTime -End (Get-Date)).TotalSeconds
+    Write-Success "Service running (after ${elapsed}s)"
 }
