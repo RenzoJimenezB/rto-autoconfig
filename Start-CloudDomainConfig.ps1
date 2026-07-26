@@ -476,6 +476,8 @@ try {
     Invoke-Command -Session $session -ScriptBlock {
         param($scriptPath, $market, $client, $certDir, $sqlFilePath)
 
+        Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
         & $scriptPath -Market      $market `
             -Client      $client `
             -CertDir     $certDir `
