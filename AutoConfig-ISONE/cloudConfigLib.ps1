@@ -5,7 +5,7 @@ function initFunc_Common {
     New-Item -Path C:\PCI\trust\$domainName -ItemType Directory -Force | Out-Null
     New-Item -Path C:\PCI-Updates\GM\custom\$domainName\applications\GenPortal.ear\APP-INF\classes -ItemType Directory -Force | Out-Null
 	
-    Copy-Item (Join-Path $scriptDir "Files\GSMS_GM_truststore.jks") C:\PCI\trust\$domainName\${domainName}_GM_truststore.jks
+    Copy-Item (Join-Path $scriptDir "Files\GSMS_GM_truststore.jks") C:\PCI\trust\$domainName\${domainName}_GM_truststore.jks -ErrorAction Stop
 
     # Pre-configure SQL Developer connection with domain-s JDBC URL
     $jdbcConfigFile = "C:\PCI\domain\$domainName\config\jdbc\GTDW-8080-jdbc.xml"	
@@ -39,7 +39,7 @@ function initFunc_ISONE([string]$clientName, [string]$CertDir) {
         "Settlements\Download\SFTP",
         "Settlements\Statements",
 
-        "Upload\Auto",
+        "Upload\Auto"
     )
 
     foreach ($folder in $folders) {
