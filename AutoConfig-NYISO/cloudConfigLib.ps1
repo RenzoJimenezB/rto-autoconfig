@@ -53,14 +53,14 @@ function initFunc_NYISO([string]$clientName, [string]$CertDir) {
         "Settlements\Archive",
         "Settlements\Statements",
 
-        "Upload\Auto",
+        "Upload\Auto"
     )
 
     foreach ($folder in $folders) {
         New-Item -Path "C:\NYISO\$folder" -ItemType Directory -Force | Out-Null
     }
 
-    Copy-Item (Join-Path $scriptDir "Files\PCIKEY.keystore") C:\NYISO\Certificates\PCIKEY.keystore
+    Copy-Item (Join-Path $scriptDir "Files\ISONE_NYISO_Keystore.jks") C:\NYISO\Certificates\PCIKEY.keystore -ErrorAction Stop
     Copy-Item "$CertDir\*" C:\NYISO\Certificates -Recurse -Force
 }
 
