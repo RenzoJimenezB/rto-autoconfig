@@ -26,15 +26,39 @@ function initFunc_ERCOT([string]$clientName, [string]$CertDir) {
     Set-TimeZone -Name 'Central Standard Time'
     Write-Host "The server timezone is now being set to CST"
 	
-    $folders = @(
+    $boFolders = @(
+        "Archive",
+        "Calendar",
+        "Certificates\PROD",
+        "Disputes",
+        "Download",
+        "ercot_notifications",
+        "invoice_reports",
+        "Invoices",
+        "Manual\DAM",
+        "Manual\RTM",
+        "Statements"
     )
 
-    foreach ($folder in $folders) {
-        New-Item -Path "C:\PCI\$folder" -ItemType Directory -Force | Out-Null
+    foreach ($folder in $boFolders) {
+        New-Item -Path "C:\ERCOT\BO\$folder" -ItemType Directory -Force | Out-Null
     }
 
-    Copy-Item (Join-Path $scriptDir "Files\sppim_2017.jks") C:\PCI\certificates\sppim_2017.jks
-    Copy-Item (Join-Path $scriptDir "Files\Client_CERTS\$clientName\*") C:\PCI\certificates -Recurse -Force
+    $foFolders = @(
+        "Archive",
+        "Certificates\MOTE",
+        "Download",
+        "Import",
+        "Submit_Cache",
+        "Upload\Auto"
+    )
+
+    foreach ($folder in $foFolders) {
+        New-Item -Path "C:\ERCOT\FO\$folder" -ItemType Directory -Force | Out-Null
+    }
+
+    Copy-Item (Join-Path $scriptDir "Files\clientTruststore.jks") C:\...\clientTruststore.jks
+    Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI\domain\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
 }
 
 # ─────────────────────────────────────────────
