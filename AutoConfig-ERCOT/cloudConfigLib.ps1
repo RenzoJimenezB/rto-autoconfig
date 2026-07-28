@@ -57,8 +57,11 @@ function initFunc_ERCOT([string]$clientName, [string]$CertDir) {
         New-Item -Path "C:\ERCOT\FO\$folder" -ItemType Directory -Force | Out-Null
     }
 
-    Copy-Item (Join-Path $scriptDir "Files\clientTruststore.jks") C:\...\clientTruststore.jks
+    Copy-Item (Join-Path $scriptDir "Files\clientTruststore.jks") C:\ERCOT\clientTruststore.jks -ErrorAction Stop
+
+    Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI-Updates\GM\custom\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
     Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI\domain\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
+    Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI\domain\$domainName\crypto.properties"
 }
 
 # ─────────────────────────────────────────────
