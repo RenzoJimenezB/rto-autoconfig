@@ -250,9 +250,9 @@ elseif (-not $marketUsesKeystore) {
     }
     Write-Success "Cert folder found: $certSourcePath"
 
-    $certFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue | Where-Object {
+    $certFiles = @(Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue | Where-Object {
         $_.Extension -in $CERT_EXTENSIONS
-    }
+    })
 
     if ($certFiles.Count -eq 0) {
         Write-Fail "No cert files found in: $certSourcePath"
