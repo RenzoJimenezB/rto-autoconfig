@@ -43,5 +43,14 @@ BEGIN
 	UPDATE SPARAMETER SET VALUE = 'Y' WHERE SYSTEM = 'GenManager' and TYPE = '_SYSTEM_' and NAME = 'EDART_SANDBOX';
 	UPDATE SPARAMETER SET VALUE = '-' WHERE SYSTEM = 'AssetOperations' and TYPE = 'OutageManagementPJM' and NAME = 'EDART_URL_S';
 	UPDATE SPARAMETER SET VALUE = '-' WHERE SYSTEM = 'AssetOperations' and TYPE = 'OutageManagementPJM' and NAME = 'USE_MODE';
+
+	UPDATE SPARAMETER SET VALUE = 'PCI Cloud Environment' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'ENVIRONMENT';
+	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/logo-white-on-clear-bg.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO';
+	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/logo-white-on-clear-bg.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO_DARK';
+
+	UPDATE SPARAMETER SET VALUE = 'gsms' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_CONNECT';
+	UPDATE SPARAMETER SET VALUE = 'pci' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_PASSWORD';
+	UPDATE SPARAMETER SET VALUE = 'pci' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_USER';
+	UPDATE SPARAMETER SET VALUE = 'false' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'FILE_ARCHIVER_ENABLED';
   COMMIT;
 END;
