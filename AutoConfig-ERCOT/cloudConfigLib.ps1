@@ -24,7 +24,7 @@ function initFunc_Common {
 # ─────────────────────────────────────────────
 function initFunc_ERCOT([string]$clientName, [string]$CertDir) {
     Set-TimeZone -Name 'Central Standard Time'
-    Write-Host "The server timezone is now being set to CST"
+    Write-Info "Server timezone set to CST"
 	
     $boFolders = @(
         "Archive",
@@ -62,6 +62,28 @@ function initFunc_ERCOT([string]$clientName, [string]$CertDir) {
     Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI-Updates\GM\custom\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
     Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI\domain\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
     Copy-Item (Join-Path $scriptDir "Files\crypto.properties") "C:\PCI\domain\$domainName\crypto.properties"
+}
+
+# ─────────────────────────────────────────────
+#  ERCOT — cert/wsdd staging (MOTE or PROD)
+# ─────────────────────────────────────────────
+function stageErcotFiles([string]$Environment, [string]$SourceDir, [string]$Label) {
+    if (-not $SourceDir -or -not (Test-Path $SourceDir)) {
+        Write-Warn "No $Label files staged for this client; skipping"
+        return
+    }
+
+    $destination = if ($Environment -eq 'PROD') {
+        "C:\ERCOT\BO\Certificates\PROD"
+    }
+    else {
+        "C:\ERCOT\FO\Certificates\MOTE"
+    }
+
+    # Certs and wsdd files land in the same folder so pairs are easy to spot for
+    # troubleshooting; they accumulate here across environment switches by design.
+    Copy-Item -Path "$SourceDir\*" -Destination $destination -Force
+    Write-Success "$Label files copied to $destination"
 }
 
 # ─────────────────────────────────────────────
@@ -271,12 +293,20 @@ function buildjdbc {
     }
 }
 
-function genericSQL([string]$Market) {
+function genericSQL([string]$Market, [string]$Environment) {
     $genericSQLPath = Join-Path $scriptDir "Files\genericSQL_$market.sql"
     if (!(Test-Path $genericSQLPath)) {
         throw "Missing generic SQL file: $genericSQLPath"
     }
-    return (Get-Content -Path $genericSQLPath -Raw)
+    $sql = Get-Content -Path $genericSQLPath -Raw
+
+    if ($Environment) {
+        # USE_MODE: 'S' = MOTE/Sandbox, 'M' = Production/MIS
+        $useModeValue = if ($Environment -eq 'PROD') { 'M' } else { 'S' }
+        $sql = $sql -replace '("USE_MODE",\s*\r?\n\s*)"S"', "`$1`"$useModeValue`""
+    }
+
+    return $sql
 }
 
 function clientSQL([string]$SqlFilePath) {

@@ -20,7 +20,9 @@ param(
     [Parameter(Mandatory = $true)][string]$Market,
     [Parameter(Mandatory = $true)][string]$Client,
     [Parameter(Mandatory = $true)][string]$CertDir,
-    [Parameter(Mandatory = $true)][string]$SqlFilePath
+    [Parameter(Mandatory = $true)][string]$SqlFilePath,
+    [Parameter(Mandatory = $true)][ValidateSet('MOTE', 'PROD')][string]$Environment,
+    [Parameter(Mandatory = $false)][string]$WsddDir
 )
 
 function Write-Step {
@@ -73,13 +75,16 @@ Write-Step 'Script initializing, please wait...'
 
 # Load SQL payloads
 Write-Info "Using client SQL: $Client.sql"
+Write-Info "Environment: $Environment"
 $clientSqlBlock = clientSQL $SqlFilePath
 $clientName = $Client
-$genericSqlBlock = genericSQL $Market
+$genericSqlBlock = genericSQL $Market $Environment
 
-# Run initialization 
+# Run initialization
 initFunc_Common
 initFunc_ERCOT $clientName $CertDir
+stageErcotFiles $Environment $CertDir 'cert'
+stageErcotFiles $Environment $WsddDir 'wsdd'
 
 # Build environment details for WebLogic scripting
 Write-Step 'Configuring server environment'
