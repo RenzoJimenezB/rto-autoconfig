@@ -1,7 +1,7 @@
 -- Asset Owners with Market Participant Name = WRGS
 UPDATE SASSET_OWNER_CONFIG
 SET
-    CERTIFICATE = 'C:\PCI\certificates\Client_Certificates\Evergy\006943781$API_WRGSQSE2.pfx',
+    CERTIFICATE = 'C:\PCI\certificates\Client_Certificates\006943781$API_WRGSQSE2.pfx',
     PASSWORD = '3QiCq$VsysuLQ',
 -- Prod Screen Name
     USER1 = 'EX000004355',
@@ -42,7 +42,7 @@ WHERE ASSET_OWNER_KEY IN (
 -- Asset Owners with a Market Participant Name other than WRGS
 UPDATE SASSET_OWNER_CONFIG
 SET
-    CERTIFICATE = 'C:\PCI\certificates\Client_Certificates\Evergy\006943781$API_WRGSQSE2.pfx',
+    CERTIFICATE = 'C:\PCI\certificates\Client_Certificates\006943781$API_WRGSQSE2.pfx',
     PASSWORD = '3QiCq$VsysuLQ',
 -- Prod Screen Name
     USER1 = 'EX000004355',

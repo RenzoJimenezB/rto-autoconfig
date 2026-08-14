@@ -142,8 +142,8 @@ if (-not $runningFromApp) {
     } while ($market -notin $validMarkets)
 }
 
-$keystoreMarkets = @('CAISO', 'ERCOT')
-$marketUsesKeystore = $market -in $keystoreMarkets
+$isCaiso = $market -eq 'CAISO'
+$isErcot = $market -eq 'ERCOT'
 
 # CAISO only:
 $noSettlementsClients = @(
@@ -153,7 +153,7 @@ $noSettlementsClients = @(
     'PNM-EESC'
 )
 
-$certFolder = if ($market -eq 'CAISO') { 'CAISO-Settlements' } else { $market }
+$certFolder = if ($isCaiso) { 'CAISO-Settlements' } else { $market }
 
 # Load canonical client list from file
 if (-not $runningFromApp) {
@@ -217,10 +217,33 @@ if (-not $runningFromApp) {
 }
 Write-Info "Client set to: $client"
 
+# ERCOT: domain points to either MOTE (sandbox) or PROD (MIS) at a time
+$ercotEnvironments = @('MOTE', 'PROD')
+$environment = $null
+
+if ($isErcot -and -not $runningFromApp) {
+    do {
+        $environment = (Prompt-NotEmpty '  Enter Environment (MOTE or PROD)').Trim().ToUpper()
+        if ($environment -notin $ercotEnvironments) {
+            Write-Warn "Invalid environment '$environment'. Please enter MOTE or PROD"
+        }
+    } while ($environment -notin $ercotEnvironments)
+}
+if ($isErcot) {
+    Write-Info "Environment set to: $environment"
+}
+
 # Derive paths
-$certSourcePath = Join-Path $NAS3_CERTS_ROOT "$certFolder\$client"
+$certSourcePath = if ($isErcot) { Join-Path $NAS3_CERTS_ROOT "$certFolder\$client\$environment" }
+else { Join-Path $NAS3_CERTS_ROOT "$certFolder\$client" }
+
 $autoConfigFolder = Join-Path $NAS3_AUTOCONFIG  "AutoConfig-$market"
-$sqlSourcePath = Join-Path $NAS3_SQL_ROOT "$market\$client.sql"
+
+$sqlSourcePath = if ($isErcot) { Join-Path $NAS3_SQL_ROOT "$market\$environment\$client.sql" }
+else { Join-Path $NAS3_SQL_ROOT "$market\$client.sql" }
+
+$wsddSourcePath = if ($isErcot) { Join-Path $NAS3_CERTS_ROOT "$market\$client\wsdd\$environment" }
+else { $null }
 
 Write-Host ''
 Write-Info 'Summary:'
@@ -236,70 +259,68 @@ Write-Host ''
 
 Write-Step 'Validating NAS3 paths'
 
-$skipSftpCerts = $market -eq 'CAISO' -and ($noSettlementsClients -contains $client)
+# CAISO and ERCOT both transfer real cert files despite being "keystore markets" —
+# CAISO's SFTP settlement certs and ERCOT's per-AO certs (already in clientTruststore.jks,
+# staged again here purely so cert/wsdd pairs sit together for manual troubleshooting).
+# They share the same folder/extension-filter validation; only two things differ:
+# ERCOT's certs live nested under CERT-XXXX subfolders (needs -Recurse), and CAISO
+# sometimes ships extensionless files paired with a .ppk/.txt companion.
+$skipSftpCerts = $isCaiso -and ($noSettlementsClients -contains $client)
+$certLabel = if ($isCaiso) { 'SFTP cert' } else { 'cert' }
+$certFiles = @()
 
 if ($skipSftpCerts) {
     Write-Info "${client}: CAISO Settlements not applicable. SFTP certs not required"
 }
-elseif (-not $marketUsesKeystore) {
-    # Non-keystore markets: validate cert directory and collect all files
+else {
     if (-not (Test-Path $certSourcePath)) {
-        Write-Fail "Cert folder not found: $certSourcePath"
-        Write-Warn "Check that Market and Client names are correct"
+        Write-Fail "$certLabel folder not found: $certSourcePath"
+        if ($isErcot) { Write-Warn "Check that Market, Client, and Environment names are correct" }
+        else { Write-Warn "Check that Market and Client names are correct" }
         exit 1
     }
-    Write-Success "Cert folder found: $certSourcePath"
+    Write-Success "$certLabel folder found: $certSourcePath"
 
-    $certFiles = @(Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue | Where-Object {
-        $_.Extension -in $CERT_EXTENSIONS
-    })
+    $allFiles = Get-ChildItem -Path $certSourcePath -File -Recurse:$isErcot -ErrorAction SilentlyContinue
+    $certFiles = @($allFiles | Where-Object { $_.Extension -in $CERT_EXTENSIONS })
+
+    if ($isCaiso) {
+        # Extensionless files paired with a .ppk/.txt companion of the same basename are certs too
+        $ppkBasenames = @($allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName })
+        $txtBasenames = @($allFiles | Where-Object { $_.Extension -eq '.txt' } | ForEach-Object { $_.BaseName })
+        $basenamesToCheck = @($ppkBasenames) + @($txtBasenames) | Sort-Object -Unique
+        $extensionlessFiles = $allFiles | Where-Object { $_.Extension -eq '' -and $_.BaseName -in $basenamesToCheck }
+        $certFiles = @(@($certFiles) + @($extensionlessFiles) | Sort-Object Name -Unique)
+    }
 
     if ($certFiles.Count -eq 0) {
-        Write-Fail "No cert files found in: $certSourcePath"
-        Write-Warn "Check that the cert directory is populated for $market\$client"
+        Write-Fail "No $certLabel files found in: $certSourcePath"
+        if ($isErcot) { Write-Warn "Check that CERT subfolders under $certSourcePath contain cert files" }
+        elseif ($isCaiso) { Write-Warn "Expected extensions: pfx, p12, ppk, cer, crt, txt" }
+        else { Write-Warn "Check that the cert directory is populated for $market\$client" }
         exit 1
     }
-    Write-Success "$($certFiles.Count) file(s) found in cert folder:"
+    Write-Success "$($certFiles.Count) $certLabel file(s) found:"
     foreach ($f in $certFiles) {
         Write-Info "  - $($f.Name)"
     }
 }
-else {
-    Write-Info "${market}: Keystore transfer handled by market script"
-}
 
-# CAISO: validate SFTP cert path only when settlements apply
-if ($market -eq 'CAISO' -and -not $skipSftpCerts) {
-    if (-not (Test-Path $certSourcePath)) {
-        Write-Fail "SFTP cert folder not found: $certSourcePath"
-        Write-Warn "Check that Market and Client names are correct"
+# ERCOT: wsdd files for the selected environment
+$wsddFiles = @()
+if ($isErcot) {
+    if (-not (Test-Path $wsddSourcePath)) {
+        Write-Fail "wsdd folder not found: $wsddSourcePath"
+        Write-Warn "Expected: Client-Certificates\ERCOT\$client\wsdd\$environment\"
         exit 1
     }
-    Write-Success "SFTP cert folder found: $certSourcePath"
-
-    $allFiles = Get-ChildItem -Path $certSourcePath -File -ErrorAction SilentlyContinue
-
-    $certFiles = $allFiles | Where-Object {
-        $_.Extension -in $CERT_EXTENSIONS
-    }
-
-    $ppkBasenames = @($allFiles | Where-Object { $_.Extension -eq '.ppk' } | ForEach-Object { $_.BaseName })
-    $txtBasenames = @($allFiles | Where-Object { $_.Extension -eq '.txt' } | ForEach-Object { $_.BaseName })
-    $basenamesToCheck = @($ppkBasenames) + @($txtBasenames) | Sort-Object -Unique
-
-    $extensionlessFiles = $allFiles | Where-Object {
-        $_.Extension -eq '' -and $_.BaseName -in $basenamesToCheck
-    }
-
-    $certFiles = @(@($certFiles) + @($extensionlessFiles) | Sort-Object Name -Unique)
-
-    if ($certFiles.Count -eq 0) {
-        Write-Fail "No SFTP cert files found in: $certSourcePath"
-        Write-Warn "Expected extensions: pfx, p12, ppk, cer, crt, txt"
+    $wsddFiles = @(Get-ChildItem -Path $wsddSourcePath -File -Filter '*.wsdd' -ErrorAction SilentlyContinue)
+    if ($wsddFiles.Count -eq 0) {
+        Write-Fail "No .wsdd files found in: $wsddSourcePath"
         exit 1
     }
-    Write-Success "$($certFiles.Count) SFTP cert file(s) found:"
-    foreach ($f in $certFiles) {
+    Write-Success "$($wsddFiles.Count) wsdd file(s) found:"
+    foreach ($f in $wsddFiles) {
         Write-Info "  - $($f.Name)"
     }
 }
@@ -313,7 +334,7 @@ Write-Success "AutoConfig folder found: $autoConfigFolder"
 
 if (-not (Test-Path $sqlSourcePath)) {
     Write-Fail "SQL file not found: $sqlSourcePath"
-    Write-Warn "Expected: $client.sql under $NAS3_SQL_ROOT\$market\"
+    Write-Warn "Expected: $client.sql under $NAS3_SQL_ROOT\$market\$environment\"
     exit 1
 }
 Write-Success "SQL file found: $sqlSourcePath"
@@ -358,17 +379,24 @@ $localTemp = Join-Path $env:TEMP "CloudDomainConfig_$(Get-Random)"
 New-Item -ItemType Directory -Path $localTemp -Force | Out-Null
 Write-Success "Local staging folder: $localTemp"
 
-# Copy cert files
-$needsCertStaging = (-not $marketUsesKeystore) -or ($market -eq 'CAISO' -and -not $skipSftpCerts)
-$stagingLabel = if ($market -eq 'CAISO') { 'SFTP cert' } else { 'cert' }
-
-if ($needsCertStaging) {
+# Copy cert files (every market stages certs except CAISO clients with no settlements)
+if (-not $skipSftpCerts) {
     $localCertsDir = Join-Path $localTemp 'Certs'
     New-Item -ItemType Directory -Path $localCertsDir -Force | Out-Null
     foreach ($f in $certFiles) {
         Copy-Item -Path $f.FullName -Destination $localCertsDir
     }
-    Write-Success "Copied $($certFiles.Count) ${stagingLabel} file(s) to staging"
+    Write-Success "Copied $($certFiles.Count) ${certLabel} file(s) to staging"
+}
+
+# ERCOT: copy this client's env-specific wsdd files
+if ($isErcot) {
+    $localWsddDir = Join-Path $localTemp 'Wsdd'
+    New-Item -ItemType Directory -Path $localWsddDir -Force | Out-Null
+    foreach ($f in $wsddFiles) {
+        Copy-Item -Path $f.FullName -Destination $localWsddDir
+    }
+    Write-Success "Copied $($wsddFiles.Count) wsdd file(s) to staging"
 }
 
 # Copy AutoConfig folder
@@ -410,26 +438,26 @@ try {
         }
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
         New-Item -ItemType Directory -Path "$dir\Certs" -Force | Out-Null
+        New-Item -ItemType Directory -Path "$dir\Wsdd" -Force | Out-Null
     } -ArgumentList $VM_TEMP_DIR
     Write-Success "Temp directory ready on VM"
 
-    if (-not $marketUsesKeystore) {
-        # Non-keystore markets: transfer all collected cert files
-        Write-Step "Transferring cert files to VM"
+    if (-not $skipSftpCerts) {
+        Write-Step "Transferring $certLabel files to VM"
         Copy-Item -Path "$localCertsDir\*" `
             -Destination "$VM_TEMP_DIR\Certs" `
             -ToSession $session `
             -Force
-        Write-Success "Cert files transferred"
+        Write-Success "$certLabel files transferred"
     }
-    elseif ($market -eq 'CAISO' -and -not $skipSftpCerts) {
-        # CAISO: transfer SFTP settlement certs when applicable
-        Write-Step "Transferring CAISO SFTP certs to VM"
-        Copy-Item -Path "$localCertsDir\*" `
-            -Destination "$VM_TEMP_DIR\Certs" `
+
+    if ($isErcot) {
+        Write-Step "Transferring wsdd files to VM"
+        Copy-Item -Path "$localWsddDir\*" `
+            -Destination "$VM_TEMP_DIR\Wsdd" `
             -ToSession $session `
             -Force
-        Write-Success "SFTP cert files transferred"
+        Write-Success "wsdd files transferred"
     }
 
     # Transfer AutoConfig folder
@@ -463,29 +491,41 @@ catch {
 $mainScript = "$VM_TEMP_DIR\AutoConfig-$market\Configure_Domain.ps1"
 
 Write-Step "Executing AutoConfig script on VM (elevated)"
-Write-Info "Script    : $mainScript"              
-Write-Info "Market    : $market"                  
-Write-Info "Client    : $client"                  
-Write-Info "CertDir   : $VM_TEMP_DIR\Certs"       
-Write-Info "SQL file  : $VM_TEMP_DIR\$client.sql" 
+Write-Info "Script    : $mainScript"
+Write-Info "Market    : $market"
+Write-Info "Client    : $client"
+Write-Info "CertDir   : $VM_TEMP_DIR\Certs"
+Write-Info "SQL file  : $VM_TEMP_DIR\$client.sql"
+if ($isErcot) {
+    Write-Info "Environment: $environment"
+    Write-Info "WsddDir   : $VM_TEMP_DIR\Wsdd"
+}
 Write-Host ''
 
 Write-Host '=============================================' -ForegroundColor DarkCyan
 
 try {
     Invoke-Command -Session $session -ScriptBlock {
-        param($scriptPath, $market, $client, $certDir, $sqlFilePath)
+        param($scriptPath, $market, $client, $certDir, $sqlFilePath, $isErcot, $environment, $wsddDir)
 
         Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
-        & $scriptPath -Market      $market `
-            -Client      $client `
-            -CertDir     $certDir `
-            -SqlFilePath $sqlFilePath
+        $params = @{
+            Market      = $market
+            Client      = $client
+            CertDir     = $certDir
+            SqlFilePath = $sqlFilePath
+        }
+        if ($isErcot) {
+            $params.Environment = $environment
+            $params.WsddDir = $wsddDir
+        }
+
+        & $scriptPath @params
 
         if (-not $?) { throw }
 
-    } -ArgumentList $mainScript, $market, $client, "$VM_TEMP_DIR\Certs", "$VM_TEMP_DIR\$client.sql" -ErrorAction Stop
+    } -ArgumentList $mainScript, $market, $client, "$VM_TEMP_DIR\Certs", "$VM_TEMP_DIR\$client.sql", $isErcot, $environment, "$VM_TEMP_DIR\Wsdd" -ErrorAction Stop
 
     Write-Host ''
     Write-Host '=============================================' -ForegroundColor DarkCyan
