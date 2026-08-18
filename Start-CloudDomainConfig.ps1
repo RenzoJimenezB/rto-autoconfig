@@ -145,7 +145,7 @@ if (-not $runningFromApp) {
 $isCaiso = $market -eq 'CAISO'
 $isErcot = $market -eq 'ERCOT'
 
-# CAISO only:
+# CAISO clients that don't require SFTP settlement certs
 $noSettlementsClients = @(
     'AVISTA-TO',
     'SMUD',
@@ -259,12 +259,7 @@ Write-Host ''
 
 Write-Step 'Validating NAS3 paths'
 
-# CAISO and ERCOT both transfer real cert files despite being "keystore markets" —
-# CAISO's SFTP settlement certs and ERCOT's per-AO certs (already in clientTruststore.jks,
-# staged again here purely so cert/wsdd pairs sit together for manual troubleshooting).
-# They share the same folder/extension-filter validation; only two things differ:
-# ERCOT's certs live nested under CERT-XXXX subfolders (needs -Recurse), and CAISO
-# sometimes ships extensionless files paired with a .ppk/.txt companion.
+# Cert files
 $skipSftpCerts = $isCaiso -and ($noSettlementsClients -contains $client)
 $certLabel = if ($isCaiso) { 'SFTP cert' } else { 'cert' }
 $certFiles = @()
@@ -281,6 +276,7 @@ else {
     }
     Write-Success "$certLabel folder found: $certSourcePath"
 
+    # ERCOT certs are nested one level down, in a CERT-XXXX subfolder per AO
     $allFiles = Get-ChildItem -Path $certSourcePath -File -Recurse:$isErcot -ErrorAction SilentlyContinue
     $certFiles = @($allFiles | Where-Object { $_.Extension -in $CERT_EXTENSIONS })
 
@@ -325,6 +321,7 @@ if ($isErcot) {
     }
 }
 
+# AutoConfig folder
 if (-not (Test-Path $autoConfigFolder)) {
     Write-Fail "AutoConfig folder not found: $autoConfigFolder"
     Write-Warn "Expected: AutoConfig-$market folder in $NAS3_AUTOCONFIG"
@@ -332,6 +329,7 @@ if (-not (Test-Path $autoConfigFolder)) {
 }
 Write-Success "AutoConfig folder found: $autoConfigFolder"
 
+# SQL file
 if (-not (Test-Path $sqlSourcePath)) {
     Write-Fail "SQL file not found: $sqlSourcePath"
     Write-Warn "Expected: $client.sql under $NAS3_SQL_ROOT\$market\$environment\"
@@ -379,7 +377,7 @@ $localTemp = Join-Path $env:TEMP "CloudDomainConfig_$(Get-Random)"
 New-Item -ItemType Directory -Path $localTemp -Force | Out-Null
 Write-Success "Local staging folder: $localTemp"
 
-# Copy cert files (every market stages certs except CAISO clients with no settlements)
+# Cert files
 if (-not $skipSftpCerts) {
     $localCertsDir = Join-Path $localTemp 'Certs'
     New-Item -ItemType Directory -Path $localCertsDir -Force | Out-Null
@@ -389,7 +387,7 @@ if (-not $skipSftpCerts) {
     Write-Success "Copied $($certFiles.Count) ${certLabel} file(s) to staging"
 }
 
-# ERCOT: copy this client's env-specific wsdd files
+# wsdd files
 if ($isErcot) {
     $localWsddDir = Join-Path $localTemp 'Wsdd'
     New-Item -ItemType Directory -Path $localWsddDir -Force | Out-Null
