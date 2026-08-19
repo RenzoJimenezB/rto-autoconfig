@@ -1,35 +1,38 @@
 -- Asset Owners with Market Participant Name = WRGS
 UPDATE SASSET_OWNER_CONFIG
 SET
-    CERTIFICATE = 'C:\PCI\certificates\Client_Certificates\006943781$API_WRGSQSE2.pfx',
-    PASSWORD = '3QiCq$VsysuLQ',
+    ACTIVE = 'Y',
+    SETTLE = 'Y',
+    CERTIFICATE = 'C:\PCI\certificates\PCI_API_SPP_WRGS_NORMAN.pfx',
+    PASSWORD = 'Evergy123!',
 -- Prod Screen Name
-    USER1 = 'EX000004355',
+    USER1 = 'EX000004343',
 -- Prod API Key
-    USER2 = 'aGG/JiVaQ/uhK51+NKCcsebusL7JmyUwlpfuD8teZQLeMg6DMqSiDpFFye9dZGmrxTANvAwxFnZope97FtpDKg==',
+    USER2 = 'fw0FxuMbAoI3/u+rFVHUheJXY3DEMxs9vhoyR6jjXBMenmQaLpjtqc2ptplMsMkB1hAq0u+993rx0GeLr2ZlIQ==',
 -- MTE Screen Name
-    USER3 = 'EX000000450',
+    USER3 = 'EX000001979',
 -- MTE API Key
-    USER4 = 'UzfstyYyHYm6nuI+owEcKVXlHyJfMmpm3j+PFy2mQzBaW2JPU9YCAnJJzV2u5LrgwCWgyKLjakhyoxfWfZWPLA=='
+    USER4 = 'rp0P2OoMcZC2/PLEHQ1Ev4x9dGsWl7awECFx+DhPtebkS7VYFuCcBI/8oLWKG4Bk4ahblGfEKZZB1l1r9B0Gpw==',
+-- MTE Certificate
+    USER5 = 'C:\PCI\certificates\PCI_API_SPP_WRGS_NORMAN.pfx',
+-- MTE Password
+    USER6 = 'Evergy123!'
 WHERE ASSET_OWNER_KEY IN (
     SELECT ASSET_OWNER_KEY FROM SASSET_OWNER
     WHERE NAME IN (
         '1073',
         'BUCK_X',
+        'CHAN',
         'CLW1',
         'COWP',
-        'DEC',
-        'FR3',
         'FSEC',
         'HCPP_X',
         'KEPC',
         'KN01',
         'KVEC',
-        'NIXA',
         'NMEC',
-        'PARL',
         'PBEL',
-        'PEOP_X',
+        'PEC',
         'PLWC',
         'WR1_X',
         'WR2_X',
@@ -42,34 +45,34 @@ WHERE ASSET_OWNER_KEY IN (
 -- Asset Owners with a Market Participant Name other than WRGS
 UPDATE SASSET_OWNER_CONFIG
 SET
-    CERTIFICATE = 'C:\PCI\certificates\Client_Certificates\006943781$API_WRGSQSE2.pfx',
-    PASSWORD = '3QiCq$VsysuLQ',
+    ACTIVE = 'Y',
+    SETTLE = 'Y',
+    CERTIFICATE = 'C:\PCI\certificates\PCI_API_SPPIM_NORMAN_27.pfx',
+    PASSWORD = '50ftRoman!',
 -- Prod Screen Name
-    USER1 = 'EX000004355',
+    USER1 = 'EX000000617',
 -- Prod API Key
-    USER2 = 'aGG/JiVaQ/uhK51+NKCcsebusL7JmyUwlpfuD8teZQLeMg6DMqSiDpFFye9dZGmrxTANvAwxFnZope97FtpDKg==',
+    USER2 = 'tQkbOClbOCnsjF6UIERSI7gwsJdg/M5TV024do+yPI/WIaQ8u9mfSNo5+nPo7XPx1/mNBN45s/kq2mS8wk/GZA==',
 -- MTE Screen Name
-    USER3 = 'EX000000450',
+    USER3 = 'EX000000372',
 -- MTE API Key
-    USER4 = 'UzfstyYyHYm6nuI+owEcKVXlHyJfMmpm3j+PFy2mQzBaW2JPU9YCAnJJzV2u5LrgwCWgyKLjakhyoxfWfZWPLA=='
+    USER4 = 'mHJKQPatzWNzUvTNGA4gLmuWtXlnCVkMsLtb/UzxvuNfeIPEyG8z/ppc07xTwes0xPhwynuqDQdWlfrHN7Dg/w==',
+-- MTE Certificate
+    USER5 = 'C:\PCI\certificates\PCI_API_SPPIM_NORMAN_27.pfx',
+-- MTE Password
+    USER6 = '50ftRoman!'
 WHERE ASSET_OWNER_KEY IN (
     SELECT ASSET_OWNER_KEY FROM SASSET_OWNER
     WHERE NAME IN (
         'CFSP',
-        'CHAN',
-        'DGPM',
         'EDEP',
-        'ETEC',
         'GDWL',
         'JFY_X',
         'KCPS',
         'KFOS_X',
-        'MIDW',
         'MJST',
         'MNCO',
-        'OLSP',
         'PARL_X',
-        'PEC',
         'SIKE',
         'SLNG',
         'UCU'

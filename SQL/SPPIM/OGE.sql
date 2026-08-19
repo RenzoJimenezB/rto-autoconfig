@@ -1,5 +1,7 @@
 UPDATE SASSET_OWNER_CONFIG
 SET
+    ACTIVE = 'Y',
+    SETTLE = 'Y',
     CERTIFICATE = 'C:\PCI\certificates\PCI OGE Hosted TEST.pfx',
     PASSWORD = 'oge1234$',
 -- Prod Screen Name

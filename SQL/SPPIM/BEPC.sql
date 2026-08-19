@@ -1,5 +1,7 @@
 UPDATE SASSET_OWNER_CONFIG
 SET
+    ACTIVE = 'Y',
+    SETTLE = 'Y',
     CERTIFICATE = 'C:\PCI\certificates\PCI_ReadOnly1 (2025-2027).pfx',
     PASSWORD = 'ATKm@ncw975n',
 -- Prod Screen Name

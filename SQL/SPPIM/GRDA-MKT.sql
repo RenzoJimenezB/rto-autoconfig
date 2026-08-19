@@ -1,17 +1,9 @@
 UPDATE SASSET_OWNER_CONFIG
-SET CERTIFICATE = 'C:\PCI\certificates\PCI_Prod_and_MTE.pfx',
-PASSWORD = 'M@k31tR@1n!'
-WHERE ASSET_OWNER_KEY IN (
-    SELECT ASSET_OWNER_KEY FROM SASSET_OWNER
-    WHERE NAME IN (
-        'CMLP',
-        'GRDX',
-        'OGRB_X'
-    )
-);
-
-UPDATE SASSET_OWNER_CONFIG
 SET
+    ACTIVE = 'Y',
+    SETTLE = 'Y',
+    CERTIFICATE = 'C:\PCI\certificates\PCI_Prod_and_MTE.pfx',
+    PASSWORD = 'M@k31tR@1n!',
 -- Prod API Key and Screen Name need to be updated!
 -- Prod Screen Name
     USER1 = 'EX000010102',
@@ -24,4 +16,12 @@ SET
 -- MTE Certificate
     USER5 = 'C:\PCI\certificates\PCI_Prod_and_MTE.pfx',
 -- MTE Password
-    USER6 = 'M@k31tR@1n!';
+    USER6 = 'M@k31tR@1n!'
+WHERE ASSET_OWNER_KEY IN (
+    SELECT ASSET_OWNER_KEY FROM SASSET_OWNER
+    WHERE NAME IN (
+        'CMLP',
+        'GRDX',
+        'OGRB_X'
+    )
+);

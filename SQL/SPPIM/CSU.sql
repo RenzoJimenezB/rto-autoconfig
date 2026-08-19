@@ -1,5 +1,7 @@
 UPDATE SASSET_OWNER_CONFIG
 SET
+    ACTIVE = 'Y',
+    SETTLE = 'Y',
     CERTIFICATE = 'C:\PCI\certificates\PCI_CSU_Oasis_SPPIM.pfx',
     PASSWORD = 'Oati$2022',
 -- Prod Screen Name
@@ -20,17 +22,6 @@ WHERE ASSET_OWNER_KEY IN (
         'CSU',
         'CSUM',
         'OTER'
-    )
-);
-
-UPDATE SASSET_OWNER_CONFIG
-SET 
-    ACTIVE = 'N',
-    SETTLE = 'N'
-WHERE ASSET_OWNER_KEY IN (
-    SELECT ASSET_OWNER_KEY FROM SASSET_OWNER
-    WHERE NAME IN (
-        'OTERR'
     )
 );
 

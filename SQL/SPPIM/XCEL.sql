@@ -1,5 +1,7 @@
 UPDATE SASSET_OWNER_CONFIG
 SET
+    ACTIVE = 'Y',
+    SETTLE = 'Y',
     CERTIFICATE = 'C:\PCI\certificates\PCIXCELMISOSPPIMRO.pfx',
     PASSWORD = 'Spiupo23!',
 -- Prod Screen Name
