@@ -1,0 +1,28 @@
+BEGIN
+ 	UPDATE SUSER SET U_PASSWORD = 'gtwp$pci1' WHERE U_NAME IN ('Admin','background');
+	UPDATE SPARAMETER SET "VALUE" = 'gtwp$pci1' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'BACKGROUND_PASSWORD';
+  
+	UPDATE SUSER SET SOURCE = 'S';
+	UPDATE SASSET_OWNER_CONFIG SET ACTIVE= 'N';
+
+  UPDATE SPARAMETER SET VALUE = 'C:\NYISO\Archive' WHERE SYSTEM = 'GenManager' and TYPE = 'NYISO' and NAME = 'ARCHIVE_DIRECTORY';
+  UPDATE SPARAMETER SET VALUE = 'C:\NYISO\Upload\Auto' WHERE SYSTEM = 'GenManager' and TYPE = 'NYISO' and NAME = 'AUTO_UPLOAD_DIRECTORY';
+  UPDATE SPARAMETER SET VALUE = 'C:\NYISO\Certificates' WHERE SYSTEM = 'GenManager' and TYPE = 'NYISO' and NAME = 'CERTS_DIRECTORY';
+  UPDATE SPARAMETER SET VALUE = 'C:\NYISO\Download' WHERE SYSTEM = 'GenManager' and TYPE = 'NYISO' and NAME = 'DOWNLOAD_DIRECTORY';
+  UPDATE SPARAMETER SET VALUE = 'C:\NYISO\Settlements\Archive' WHERE SYSTEM = 'GenManager' and TYPE = 'NYISO' and NAME = 'SETTLEMENT_ARCHIVE_DIRECTORY';
+  UPDATE SPARAMETER SET VALUE = 'C:\NYISO\Settlements\Statements' WHERE SYSTEM = 'GenManager' and TYPE = 'NYISO' and NAME = 'STATEMENT_LOAD_DIRECTORY';
+  UPDATE SPARAMETER SET VALUE = 'C:\NYISO\Certificates\PCIKEY.keystore' WHERE SYSTEM = 'GenManager' and TYPE = 'NYISO' and NAME = 'TRUST_STORE';
+  UPDATE SPARAMETER SET VALUE = '#code4quality' WHERE SYSTEM = 'GenManager' and TYPE = 'NYISO' and NAME = 'TRUST_STORE_PASSWORD';
+  UPDATE SPARAMETER SET VALUE = 'C:\NYISO\Upload' WHERE SYSTEM = 'GenManager' and TYPE = 'NYISO' and NAME = 'UPLOAD_DIRECTORY';
+  UPDATE SPARAMETER SET VALUE = 'S' WHERE SYSTEM = 'GenManager' and TYPE = 'NYISO' and NAME = 'USE_MODE';
+
+  UPDATE SPARAMETER SET VALUE = 'PCI Cloud Environment' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'ENVIRONMENT';
+	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/logo-white-on-clear-bg.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO';
+	UPDATE SPARAMETER SET VALUE = '<a href="../../common/portal.jsp"><img id="logo-img" src="/images/logo-white-on-clear-bg.svg"/></a>' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'PORTAL_LOGO_DARK';
+
+	UPDATE SPARAMETER SET VALUE = 'gsms' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_CONNECT';
+	UPDATE SPARAMETER SET VALUE = 'pci' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_PASSWORD';
+	UPDATE SPARAMETER SET VALUE = 'pci' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'GP_USER';
+	UPDATE SPARAMETER SET VALUE = 'false' WHERE SYSTEM = 'GenPortal' and TYPE = '_SYSTEM_' and NAME = 'FILE_ARCHIVER_ENABLED';
+  COMMIT;
+END;

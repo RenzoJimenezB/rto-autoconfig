@@ -23,7 +23,7 @@ function initFunc_Common {
 #  Market Init — ISONE
 # ─────────────────────────────────────────────
 function initFunc_ISONE([string]$clientName, [string]$CertDir) {
-	Set-TimeZone -Name 'Central Standard Time'
+    Set-TimeZone -Name 'Eastern Standard Time'
     Write-Info "Server timezone set to EST"
 
     $folders = @(

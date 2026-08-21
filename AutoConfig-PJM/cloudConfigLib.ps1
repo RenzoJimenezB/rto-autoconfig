@@ -44,7 +44,7 @@ function initFunc_PJM([string]$clientName, [string]$CertDir) {
         "download2",
         "invoices",
         "settlements",
-        "uplpoad",
+        "upload",
         "uploadAuto",
 
         "invoices\invoiceDownload",
