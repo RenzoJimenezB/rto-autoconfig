@@ -1,14 +1,3 @@
-# Spreadsheet-driven client SQL generators live one per market under SQL Generators\
-# (Generate-<Market>ClientSql.ps1); load every one so New-ClientSqlBlock below can
-# dispatch to them. Every market is generator-driven (see $script:ClientSqlGenerators)
-# -- markets without a real implementation yet use a throwing placeholder until their
-# file is filled in. New markets just need a new file dropped in SQL Generators\;
-# nothing here needs to change to pick it up.
-$script:GeneratorsDir = Join-Path $PSScriptRoot "SQL Generators"
-Get-ChildItem -Path $script:GeneratorsDir -Filter "Generate-*ClientSql.ps1" | ForEach-Object {
-    . $_.FullName
-}
-
 # ─────────────────────────────────────────────
 #  Truststore — normalize installer-generated GM truststore
 # ─────────────────────────────────────────────
@@ -637,34 +626,15 @@ function genericSQL([string]$Market, [string]$Environment, [string]$ConfigFilesD
     return $sql
 }
 
-# Market -> generator function that builds client SQL straight from that market's
-# spreadsheet. Every market is registered; markets without a real implementation yet
-# point at a throwing placeholder (Generate-<Market>ClientSql.ps1) until it's built.
-$script:ClientSqlGenerators = @{
-    'CAISO' = { param($WorkbookPath, $Client) New-CaisoClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'ERCOT' = { param($WorkbookPath, $Client) New-ErcotClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'ISONE' = { param($WorkbookPath, $Client) New-IsoneClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'MISO'  = { param($WorkbookPath, $Client) New-MisoClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'NYISO' = { param($WorkbookPath, $Client) New-NyisoClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'PJM'   = { param($WorkbookPath, $Client) New-PjmClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'SPPIM' = { param($WorkbookPath, $Client) New-SppimClientSql -WorkbookPath $WorkbookPath -Client $Client }
-}
-
-function New-ClientSqlBlock {
-    param(
-        [Parameter(Mandatory = $true)][string]$Market,
-        [Parameter(Mandatory = $true)][string]$Client,
-        [Parameter(Mandatory = $true)][string]$WorkbookPath
-    )
-
-    if (-not $script:ClientSqlGenerators.ContainsKey($Market)) {
-        throw "No client SQL generator registered for market '$Market'"
+# The client SQL text itself is generated ahead of time, locally, by Start-CloudDomainConfig.ps1
+# (see ClientSqlGeneratorDispatcher.ps1) so the target VM never needs ImportExcel or the raw spreadsheet --
+# only the resulting .sql file is staged/transferred, same as every other market. Configure_Domain.ps1
+# just reads that file and wraps it, exactly like it always has.
+function clientSQL([string]$SqlFilePath) {
+    if (-not (Test-Path $SqlFilePath)) {
+        throw "Client SQL file not found: $SqlFilePath"
     }
-    if (-not (Test-Path $WorkbookPath)) {
-        throw "Market spreadsheet not found: $WorkbookPath"
-    }
-
-    $sql = & $script:ClientSqlGenerators[$Market] $WorkbookPath $Client
+    $sql = Get-Content -Path $SqlFilePath -Raw
     return @"
 BEGIN
 $sql

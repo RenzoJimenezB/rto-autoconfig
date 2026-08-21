@@ -8,9 +8,10 @@
 #  Sheet relationship (star schema):
 #    Asset Owners.Cert ID      -> Certificates.Cert ID
 #    Asset Owners.SFTP Cert ID -> SFTP Certificates.SFTP Cert ID
+#
+#  Import-XlsxSheet (XlsxReader.ps1) is loaded by ClientSqlGeneratorDispatcher.ps1 before
+#  this file is dot-sourced.
 # ─────────────────────────────────────────────
-
-Import-Module ImportExcel -ErrorAction Stop
 
 function Import-FilledSheet {
     param(
@@ -18,7 +19,7 @@ function Import-FilledSheet {
         [Parameter(Mandatory = $true)][string]$WorksheetName
     )
 
-    $rows = Import-Excel -Path $Path -WorksheetName $WorksheetName
+    $rows = Import-XlsxSheet -Path $Path -WorksheetName $WorksheetName
 
     # The "Client" column is only populated on the first row of each group
     # in the spreadsheet (merged-cell style); forward-fill it so every row

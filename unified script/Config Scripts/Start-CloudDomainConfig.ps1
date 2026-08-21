@@ -18,10 +18,21 @@
     Updated  : 2026-08-20 — unified script layout (Config Scripts\ + Config Files\<Market>\)
                 replaces per-market AutoConfig-<MARKET> folders.
     Updated  : 2026-08-20 — moved under MultiMarket AutoConfig\; every market is now
-                spreadsheet/generator-driven (pulls <Market>.xlsx and calls Configure_Domain.ps1
-                with -WorkbookPath). The legacy per-client SQL\<Market>\ file and $NAS3_SQL_ROOT
-                are no longer used at all from this directory. Clients\ (canonical client-name
-                lists) is unrelated to SQL sourcing and still lives at the AutoConfig root.
+                spreadsheet/generator-driven. The legacy per-client SQL\<Market>\ file and
+                $NAS3_SQL_ROOT are no longer used at all from this directory. Clients\
+                (canonical client-name lists) is unrelated to SQL sourcing and still lives
+                at the AutoConfig root.
+    Updated  : 2026-08-20 — client SQL is now generated HERE, locally, right after the
+                spreadsheet is validated (ClientSqlGeneratorDispatcher.ps1), and only the resulting
+                .sql file is staged/transferred to the VM -- not the raw spreadsheet.
+                PSRemoting's Copy-Item has high per-file overhead, so shipping a module's
+                worth of small files to every VM was slow; Configure_Domain.ps1 (VM-side) is
+                back to just reading a plain .sql file, same as it always did.
+    Updated  : 2026-08-20 — replaced the ImportExcel module with XlsxReader.ps1, a small
+                built-in-.NET-only reader (our need is narrow: plain data cells, no
+                formulas/charts). ImportExcel's ~200-file module load measured ~85s over
+                NAS3; the new reader plus full CAISO generation for all clients runs in ~5s.
+                Dependencies\ no longer carries ImportExcel at all.
 #>
 
 # ── Console ───────────────────────────────────────────────────────────────────
@@ -74,13 +85,19 @@ $NAS3_CLIENTS_ROOT = Join-Path $NAS3_AUTOCONFIG 'Clients'
 
 # Unified layout lives under MultiMarket AutoConfig\: one shared Config Scripts\
 # (Configure_Domain.ps1 + cloudConfigLib.ps1 + Generate-<Market>ClientSql.ps1 generators),
-# one Config Files\<Market>\ per market (+ shared ODP.NET zip at Config Files\ root), and the
-# market spreadsheets (<Market>.xlsx) directly at the MultiMarket AutoConfig\ root. Every
-# market is generator-driven now -- there is no legacy per-client SQL file path at all here.
+# one Config Files\<Market>\ per market (data that configures the target domain), one shared
+# Dependencies\ (third-party files our own scripts need -- currently just the ODP.NET
+# driver -- not domain config), and Client Info Spreadsheets\ (<Market>.xlsx) -- the client/AO-to-credential
+# source of truth. Structural rows (which AO maps to which cert/credential entry) are
+# maintained by us; the credential entries themselves (certs, SFTP keys, API keys, screen
+# names -- whatever a given market needs) are meant to be kept current by the team that
+# manages credentials, independent of this tooling. Every market is generator-driven now --
+# there is no legacy per-client SQL file path at all here.
 $NAS3_MULTIMARKET = Join-Path $NAS3_AUTOCONFIG 'MultiMarket AutoConfig'
 $NAS3_CONFIG_SCRIPTS = Join-Path $NAS3_MULTIMARKET 'Config Scripts'
 $NAS3_CONFIG_FILES = Join-Path $NAS3_MULTIMARKET 'Config Files'
-$NAS3_SPREADSHEETS = $NAS3_MULTIMARKET
+$NAS3_DEPENDENCIES = Join-Path $NAS3_MULTIMARKET 'Dependencies'
+$NAS3_SPREADSHEETS = Join-Path $NAS3_MULTIMARKET 'Client Info Spreadsheets'
 
 $VM_DOMAIN_SUFFIX = '.cloud.pci'
 $VM_TEMP_DIR = 'C:\Temp\CloudDomainConfig'   # temp dir created on the VM
@@ -258,7 +275,7 @@ $certSourcePath = if ($isErcot) { Join-Path $NAS3_CERTS_ROOT "$certFolder\$clien
 else { Join-Path $NAS3_CERTS_ROOT "$certFolder\$client" }
 
 $marketConfigFilesFolder = Join-Path $NAS3_CONFIG_FILES $market
-$sharedOdpZipPath = Join-Path $NAS3_CONFIG_FILES 'ODP.NET_Managed_ODAC122cR1.zip'
+$sharedOdpZipPath = Join-Path $NAS3_DEPENDENCIES 'ODP.NET_Managed_ODAC122cR1.zip'
 
 $workbookSourcePath = Join-Path $NAS3_SPREADSHEETS "$market.xlsx"
 
@@ -356,23 +373,55 @@ if (-not (Test-Path $marketConfigFilesFolder)) {
 }
 Write-Success "Config Files folder found: $marketConfigFilesFolder"
 
-# Shared ODP.NET zip
-if (-not (Test-Path $sharedOdpZipPath)) {
-    Write-Fail "Shared ODP.NET zip not found: $sharedOdpZipPath"
+# Dependencies folder (contains the ODP.NET zip staged below; not checked file-by-file,
+# same as Config Files\<Market>\ above -- a missing file inside would fail loudly at copy time)
+if (-not (Test-Path $NAS3_DEPENDENCIES)) {
+    Write-Fail "Dependencies folder not found: $NAS3_DEPENDENCIES"
     exit 1
 }
-Write-Success "Shared ODP.NET zip found: $sharedOdpZipPath"
+Write-Success "Dependencies folder found: $NAS3_DEPENDENCIES"
 
 # Market spreadsheet
 if (-not (Test-Path $workbookSourcePath)) {
     Write-Fail "Market spreadsheet not found: $workbookSourcePath"
-    Write-Warn "Expected: $market.xlsx directly under $NAS3_MULTIMARKET"
+    Write-Warn "Expected: $market.xlsx under $NAS3_SPREADSHEETS"
     exit 1
 }
 Write-Success "Market spreadsheet found: $workbookSourcePath"
 
 # ─────────────────────────────────────────────
-#  STEP 3 — Test WinRM / WSMan connectivity
+#  STEP 3 — Generate client SQL locally
+# ─────────────────────────────────────────────
+# Generated here (not on the VM) so the target VM never needs the raw spreadsheet at all --
+# only the resulting .sql text gets staged/transferred. Doing this before
+# WinRM/credentials/staging also means an unimplemented market's generator (a throwing
+# placeholder) fails fast, before ever touching the VM.
+
+Write-Step 'Generating client SQL from spreadsheet'
+
+try {
+    . (Join-Path $NAS3_CONFIG_SCRIPTS "ClientSqlGeneratorDispatcher.ps1")
+    $clientSqlText = New-ClientSqlText -Market $market -Client $client -WorkbookPath $workbookSourcePath
+    Write-Success "Client SQL generated for $market\$client"
+}
+catch {
+    Write-Fail "Client SQL generation failed"
+    Write-Warn "Error: $_"
+    exit 1
+}
+
+# Show exactly what will be staged and executed -- this is the file that ends up on the VM
+# (before the BEGIN/COMMIT/END wrapper Configure_Domain.ps1 adds at execution time), so if
+# something downstream goes wrong, the user can see right here whether the generated SQL
+# itself was wrong, rather than only finding out from a temp file that gets cleaned up.
+Write-Host ''
+Write-Host "----- Generated SQL: $client.sql -----" -ForegroundColor DarkCyan
+Write-Host $clientSqlText -ForegroundColor Gray
+Write-Host "----- End of generated SQL -----" -ForegroundColor DarkCyan
+Write-Host ''
+
+# ─────────────────────────────────────────────
+#  STEP 4 — Test WinRM / WSMan connectivity
 # ─────────────────────────────────────────────
 
 Write-Step "Testing WinRM connectivity to $vmHost"
@@ -391,7 +440,7 @@ catch {
 }
 
 # ─────────────────────────────────────────────
-#  STEP 4 — Prompt for admin credentials
+#  STEP 5 — Prompt for admin credentials
 # ─────────────────────────────────────────────
 
 Write-Step 'Preparing VM admin credentials'
@@ -402,7 +451,7 @@ if (-not $runningFromApp) {
 $adminCred = New-Object System.Management.Automation.PSCredential("$vmHost\Administrator", $adminPass)
 
 # ─────────────────────────────────────────────
-#  STEP 5 — Stage files in a local temp folder
+#  STEP 6 — Stage files in a local temp folder
 # ─────────────────────────────────────────────
 
 Write-Step 'Staging files in local temp folder'
@@ -436,21 +485,27 @@ $localConfigScripts = Join-Path $localTemp 'Config Scripts'
 Copy-Item -Path $NAS3_CONFIG_SCRIPTS -Destination $localConfigScripts -Recurse
 Write-Success "Copied Config Scripts to staging"
 
-# Config Files (this market's subfolder + the shared ODP.NET zip)
+# Dependencies (shared — just the ODP.NET zip)
+$localDependencies = Join-Path $localTemp 'Dependencies'
+New-Item -ItemType Directory -Path $localDependencies -Force | Out-Null
+Copy-Item -Path $sharedOdpZipPath -Destination $localDependencies
+Write-Success "Copied Dependencies (ODP.NET zip) to staging"
+
+# Config Files (this market's subfolder)
 $localConfigFiles = Join-Path $localTemp 'Config Files'
 $localConfigFilesMarket = Join-Path $localConfigFiles $market
 New-Item -ItemType Directory -Path $localConfigFilesMarket -Force | Out-Null
 Copy-Item -Path "$marketConfigFilesFolder\*" -Destination $localConfigFilesMarket -Recurse
-Copy-Item -Path $sharedOdpZipPath -Destination $localConfigFiles
-Write-Success "Copied Config Files ($market + shared ODP.NET zip) to staging"
+Write-Success "Copied Config Files ($market) to staging"
 
-# Market spreadsheet
-$localWorkbook = Join-Path $localTemp "$market.xlsx"
-Copy-Item -Path $workbookSourcePath -Destination $localWorkbook
-Write-Success "Copied market spreadsheet to staging: $market.xlsx"
+# Generated client SQL (already generated in STEP 3, above) -- written to disk here in the
+# same raw format as the historical hand-maintained SQL\<Market>\<Client>.sql files
+$localSql = Join-Path $localTemp "$client.sql"
+Set-Content -Path $localSql -Value $clientSqlText -Encoding utf8 -NoNewline
+Write-Success "Wrote generated SQL to staging: $client.sql"
 
 # ─────────────────────────────────────────────
-#  STEP 6 — Establish PSSession and transfer files
+#  STEP 7 — Establish PSSession and transfer files
 # ─────────────────────────────────────────────
 
 Write-Step "Establishing PSSession to $vmHost"
@@ -508,7 +563,15 @@ try {
         -Recurse -Force
     Write-Success "Config Scripts transferred"
 
-    # Transfer Config Files (this market's subfolder + shared ODP.NET zip)
+    # Transfer Dependencies (shared — just the ODP.NET zip)
+    Write-Step "Transferring Dependencies to VM"
+    Copy-Item -Path $localDependencies `
+        -Destination $VM_TEMP_DIR `
+        -ToSession $session `
+        -Recurse -Force
+    Write-Success "Dependencies transferred"
+
+    # Transfer Config Files (this market's subfolder)
     Write-Step "Transferring Config Files to VM"
     Copy-Item -Path $localConfigFiles `
         -Destination $VM_TEMP_DIR `
@@ -516,13 +579,13 @@ try {
         -Recurse -Force
     Write-Success "Config Files transferred"
 
-    # Transfer market spreadsheet
-    Write-Step "Transferring market spreadsheet to VM"
-    Copy-Item -Path $localWorkbook `
+    # Transfer generated SQL file
+    Write-Step "Transferring SQL file to VM"
+    Copy-Item -Path $localSql `
         -Destination $VM_TEMP_DIR `
         -ToSession $session `
         -Force
-    Write-Success "Market spreadsheet transferred: $market.xlsx"
+    Write-Success "SQL file transferred: $client.sql"
 }
 catch {
     Write-Fail "VM preparation failed"
@@ -533,7 +596,7 @@ catch {
 }
 
 # ─────────────────────────────────────────────
-#  STEP 7 — Execute main script elevated on VM
+#  STEP 8 — Execute main script elevated on VM
 # ─────────────────────────────────────────────
 
 $mainScript = "$VM_TEMP_DIR\Config Scripts\Configure_Domain.ps1"
@@ -545,7 +608,7 @@ Write-Info "Market       : $market"
 Write-Info "Client       : $client"
 Write-Info "CertDir      : $VM_TEMP_DIR\Certs"
 Write-Info "ConfigFiles  : $vmConfigFilesDir"
-Write-Info "Spreadsheet  : $VM_TEMP_DIR\$market.xlsx"
+Write-Info "SQL file     : $VM_TEMP_DIR\$client.sql"
 if ($isErcot) {
     Write-Info "Environment  : $environment"
     Write-Info "WsddDir      : $VM_TEMP_DIR\Wsdd"
@@ -554,11 +617,11 @@ Write-Host ''
 
 Write-Host '=============================================' -ForegroundColor DarkCyan
 
-$vmWorkbookPath = "$VM_TEMP_DIR\$market.xlsx"
+$vmSqlFilePath = "$VM_TEMP_DIR\$client.sql"
 
 try {
     Invoke-Command -Session $session -ScriptBlock {
-        param($scriptPath, $market, $client, $certDir, $workbookPath, $configFilesDir, $isErcot, $environment, $wsddDir)
+        param($scriptPath, $market, $client, $certDir, $sqlFilePath, $configFilesDir, $isErcot, $environment, $wsddDir)
 
         Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
@@ -567,7 +630,7 @@ try {
             Client         = $client
             CertDir        = $certDir
             ConfigFilesDir = $configFilesDir
-            WorkbookPath   = $workbookPath
+            SqlFilePath    = $sqlFilePath
         }
         if ($isErcot) {
             $params.Environment = $environment
@@ -578,7 +641,7 @@ try {
 
         if (-not $?) { throw }
 
-    } -ArgumentList $mainScript, $market, $client, "$VM_TEMP_DIR\Certs", $vmWorkbookPath, $vmConfigFilesDir, $isErcot, $environment, "$VM_TEMP_DIR\Wsdd" -ErrorAction Stop
+    } -ArgumentList $mainScript, $market, $client, "$VM_TEMP_DIR\Certs", $vmSqlFilePath, $vmConfigFilesDir, $isErcot, $environment, "$VM_TEMP_DIR\Wsdd" -ErrorAction Stop
 
     Write-Host ''
     Write-Host '=============================================' -ForegroundColor DarkCyan
@@ -593,7 +656,7 @@ catch {
 finally {
 
     # ─────────────────────────────────────────────
-    #  STEP 8 — Cleanup
+    #  STEP 9 — Cleanup
     # ─────────────────────────────────────────────
 
     Write-Step "Cleaning up"

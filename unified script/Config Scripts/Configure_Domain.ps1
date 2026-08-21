@@ -22,10 +22,10 @@ param(
     [Parameter(Mandatory = $true)][string]$Market,
     [Parameter(Mandatory = $true)][string]$Client,
     [Parameter(Mandatory = $true)][string]$CertDir,
+    [Parameter(Mandatory = $true)][string]$SqlFilePath,
     [Parameter(Mandatory = $true)][string]$ConfigFilesDir,
     [Parameter(Mandatory = $false)][ValidateSet('MOTE', 'PROD')][string]$Environment,
-    [Parameter(Mandatory = $false)][string]$WsddDir,
-    [Parameter(Mandatory = $true)][string]$WorkbookPath
+    [Parameter(Mandatory = $false)][string]$WsddDir
 )
 
 function Write-Step {
@@ -57,8 +57,9 @@ function Write-Info {
 $scriptDir = $PSScriptRoot
 $configLib = Join-Path $scriptDir "cloudConfigLib.ps1"
 
-# Config Files\<Market>\ is a sibling of Config Scripts\ — ODP.NET zip lives one level up (shared)
-$SharedFilesDir = Split-Path -Parent $ConfigFilesDir
+# Dependencies\ (shared third-party files our scripts need -- ODP.NET driver, ImportExcel)
+# is a sibling of Config Scripts\, same level as Config Files\.
+$SharedFilesDir = Join-Path (Split-Path $scriptDir -Parent) "Dependencies"
 
 # Load cloudConfigLib.ps1
 if (-not (Test-Path $configLib)) {
@@ -80,11 +81,11 @@ $gsmsSvc = "PCI_GM_" + $domainName
 Write-Step 'Script initializing, please wait...'
 
 # Load SQL payloads
-Write-Info "Using client SQL: generated from $WorkbookPath (client '$Client')"
+Write-Info "Using client SQL: $Client.sql"
 if ($Market -eq 'ERCOT') {
     Write-Info "Environment: $Environment"
 }
-$clientSqlBlock = New-ClientSqlBlock -Market $Market -Client $Client -WorkbookPath $WorkbookPath
+$clientSqlBlock = clientSQL $SqlFilePath
 $clientName = $Client
 $genericSqlBlock = genericSQL $Market $Environment $ConfigFilesDir
 
