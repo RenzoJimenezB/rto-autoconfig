@@ -1,1 +1,0 @@
-UPDATE SASSET_OWNER_CONFIG SET CERTIFICATE = 'pcg2 pci (caiso_issuing_ca)', PASSWORD = 'caisoteam', CERT_DETAILS = 'CN=PCG2 PCI,OU=people,O=CAISO,C=US';

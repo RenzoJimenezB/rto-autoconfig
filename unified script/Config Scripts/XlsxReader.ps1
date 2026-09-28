@@ -71,7 +71,11 @@ function Import-XlsxSheet {
         $relsNsMgr = New-Object System.Xml.XmlNamespaceManager($relsXml.NameTable)
         $relsNsMgr.AddNamespace('pr', $nsPkgRel)
         $relNode = $relsXml.SelectSingleNode("//pr:Relationship[@Id='$rId']", $relsNsMgr)
-        $sheetPath = "xl/$($relNode.GetAttribute('Target'))"
+        # Target is relative to xl/ (e.g. "worksheets/sheet1.xml") for Excel-written files,
+        # but openpyxl writes an absolute package path (e.g. "/xl/worksheets/sheet1.xml") --
+        # handle both rather than assuming Excel's convention.
+        $rawTarget = $relNode.GetAttribute('Target')
+        $sheetPath = if ($rawTarget.StartsWith('/')) { $rawTarget.TrimStart('/') } else { "xl/$rawTarget" }
 
         # --- sharedStrings.xml (optional -- absent when Excel writes inline strings instead) ---
         $sharedStrings = @()

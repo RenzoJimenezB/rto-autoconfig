@@ -88,6 +88,11 @@ function New-CaisoClientSql {
         throw "No Asset Owners rows found for client '$Client' in $WorkbookPath"
     }
 
+    $blankAoRows = @($assetOwners | Where-Object { -not $_.'Asset Owner' })
+    if ($blankAoRows) {
+        throw "Client '$Client' has $($blankAoRows.Count) Asset Owners row(s) with no Asset Owner name set"
+    }
+
     $blocks = [System.Collections.Generic.List[string]]::new()
 
     # ── SASSET_OWNER_CONFIG: one block per distinct Cert ID ──
@@ -112,30 +117,34 @@ $whereClause;
 "@)
     }
 
-    # ── SASSET_OWNER_CONFIG: Active/Settle overrides ──
-    # These AOs still get a certificate above (kept as a record even when the
-    # cert is known not to work for them, e.g. permission issues) but must not
-    # end up live: this block runs after the activation above and wins.
-    $overrideGroups = $assetOwners | Group-Object {
-        "$($_.'Active')|$($_.'Settle')"
-    }
-    foreach ($group in $overrideGroups) {
-        $parts = $group.Name -split '\|'
-        $active = if ($parts[0]) { $parts[0] } else { 'Y' }
-        $settle = if ($parts[1]) { $parts[1] } else { 'Y' }
-
-        if ($active -eq 'Y' -and $settle -eq 'Y') {
-            continue
-        }
-
-        $setParts = [System.Collections.Generic.List[string]]::new()
-        if ($active -ne 'Y') { $setParts.Add("ACTIVE = '$active'") }
-        if ($settle -ne 'Y') { $setParts.Add("SETTLE = '$settle'") }
-
+    # ── SASSET_OWNER_CONFIG: Settle, for AOs that already have a Cert ID ──
+    # ACTIVE is already set by the activation block above for these AOs -- only
+    # SETTLE needs asserting here, derived from SFTP Cert ID presence. Skipped
+    # entirely if every Cert ID holder lands in the same bucket (or there are
+    # no Cert ID holders at all).
+    $certHolderSettleGroups = $assetOwners | Where-Object { $_.'Cert ID' } |
+        Group-Object { if ($_.'SFTP Cert ID') { 'Y' } else { 'N' } }
+    foreach ($group in $certHolderSettleGroups) {
         $names = @($group.Group.'Asset Owner')
         $blocks.Add(@"
 UPDATE SASSET_OWNER_CONFIG
-SET $($setParts -join ', ')
+SET SETTLE = '$($group.Name)'
+WHERE $(Get-AssetOwnerKeyClause -Names $names -Market 'CAISO');
+"@)
+    }
+
+    # ── SASSET_OWNER_CONFIG: Active+Settle, for AOs with no Cert ID at all ──
+    # The activation block above never touches these (it's grouped by Cert ID),
+    # so this is the only place their ACTIVE gets set. Active and Settle always
+    # match here, since both are driven solely by SFTP Cert ID presence. Skipped
+    # entirely for clients where every AO has a Cert ID (e.g. CDWR).
+    $noCertGroups = $assetOwners | Where-Object { -not $_.'Cert ID' } |
+        Group-Object { if ($_.'SFTP Cert ID') { 'Y' } else { 'N' } }
+    foreach ($group in $noCertGroups) {
+        $names = @($group.Group.'Asset Owner')
+        $blocks.Add(@"
+UPDATE SASSET_OWNER_CONFIG
+SET ACTIVE = '$($group.Name)', SETTLE = '$($group.Name)'
 WHERE $(Get-AssetOwnerKeyClause -Names $names -Market 'CAISO');
 "@)
     }

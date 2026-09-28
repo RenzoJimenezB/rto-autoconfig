@@ -4,13 +4,16 @@
 function Set-GmTruststore([string]$DomainName) {
     # The WebLogic install already generates C:\PCI\trust\DOMAIN_NAME\DOMAIN_NAME_GM_truststore.jks
     # (literal placeholder folder/file names). Rename both to use the real domain name instead of
-    # copying a bundled jks from Config Files\ — this is the file the install actually trusts.
+    # copying a bundled jks from Config Files\
     $placeholderDir = 'C:\PCI\trust\DOMAIN_NAME'
     $targetDir = "C:\PCI\trust\$DomainName"
     $placeholderFileName = 'DOMAIN_NAME_GM_truststore.jks'
     $targetFileName = "${DomainName}_GM_truststore.jks"
 
     if (Test-Path $placeholderDir) {
+        if (Test-Path $targetDir) {
+            Remove-Item -Path $targetDir -Recurse -Force
+        }
         Rename-Item -Path $placeholderDir -NewName $DomainName -Force
     }
     elseif (-not (Test-Path $targetDir)) {
@@ -20,6 +23,9 @@ function Set-GmTruststore([string]$DomainName) {
     $placeholderFilePath = Join-Path $targetDir $placeholderFileName
     $targetFilePath = Join-Path $targetDir $targetFileName
     if (Test-Path $placeholderFilePath) {
+        if (Test-Path $targetFilePath) {
+            Remove-Item -Path $targetFilePath -Force
+        }
         Rename-Item -Path $placeholderFilePath -NewName $targetFileName -Force
     }
     elseif (-not (Test-Path $targetFilePath)) {
@@ -46,7 +52,7 @@ function initFunc_Common([string]$ConfigFilesDir) {
     ((Get-Content -path $connectionsJsonPath -Raw) -replace 'jdbc:oracle:thin:@yourdomainname-db.cloud.pci:1521/gsms.powercosts.com', $($jdbcUrl)) | Set-Content -Path $connectionsJsonPath
 
     $cnct = get-childitem 'C:\Users\Administrator\AppData\Roaming\SQL Developer' -Filter 'system*' | Select-Object -Property name
-    Copy-Item $connectionsJsonPath "C:\Users\Administrator\AppData\Roaming\SQL Developer\$($cnct.Name)\o.jdeveloper.db.connection\connections.json"
+    Copy-Item $connectionsJsonPath "C:\Users\Administrator\AppData\Roaming\SQL Developer\$($cnct.Name)\o.jdeveloper.db.connection\connections.json" -Force -ErrorAction Stop
 }
 
 # ─────────────────────────────────────────────
@@ -60,11 +66,14 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir, [string]$ConfigFi
         'AVISTA-MT' = 'PST'
         'AVISTA-TO' = 'PST'
         'BEPC'      = 'PST'
+        'BHEM-BA'   = 'MST'
         'BPA'       = 'PST'
         'CDWR'      = 'PST'
         'DTEET'     = 'PST'
-        'IID'       = 'PST'
+        'GUZMN-MT'  = 'MST'
+        'IID-MT'    = 'PST'
         'LADWP-MT'  = 'PST'
+        'MERCURIA'  = 'PST'
         'NVE-MT'    = 'PST'
         'P66-MT'    = 'PST'
         'PAC'       = 'PST'
@@ -84,7 +93,9 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir, [string]$ConfigFi
         'SRP-STF'   = 'MST'
         'SRP-TGO'   = 'MST'
         'TID'       = 'PST'
+        'TPU-BO'    = 'PST'
         'TPU-MT'    = 'PST'
+        'TRISTATE'  = 'MST'
         'UMPA-MT'   = 'MST'
         'XCEL'      = 'PST'
     }
@@ -131,11 +142,11 @@ function initFunc_CAISO([string]$clientName, [string]$CertDir, [string]$ConfigFi
         New-Item -Path $folder -ItemType Directory -Force | Out-Null
     }
 
-    Copy-Item (Join-Path $ConfigFilesDir "CAISOEIM.keystore") C:\CAISO\CAISOEIM.keystore
-    Copy-Item (Join-Path $ConfigFilesDir "CAISOEIM.txt") C:\CAISO\CAISOEIM.txt
+    Copy-Item (Join-Path $ConfigFilesDir "CAISOEIM.keystore") C:\CAISO\CAISOEIM.keystore -Force -ErrorAction Stop
+    Copy-Item (Join-Path $ConfigFilesDir "CAISOEIM.txt") C:\CAISO\CAISOEIM.txt -Force -ErrorAction Stop
 
-    Copy-Item (Join-Path $ConfigFilesDir "crypto.properties") "C:\PCI-Updates\GM\custom\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
-    Copy-Item (Join-Path $ConfigFilesDir "crypto.properties") "C:\PCI\domain\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
+    Copy-Item (Join-Path $ConfigFilesDir "crypto.properties") "C:\PCI-Updates\GM\custom\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties" -Force -ErrorAction Stop
+    Copy-Item (Join-Path $ConfigFilesDir "crypto.properties") "C:\PCI\domain\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties" -Force -ErrorAction Stop
 
     Copy-Item "$CertDir\*" C:\CAISO\Settlements\SFTP -Recurse -Force
 }
@@ -178,11 +189,11 @@ function initFunc_ERCOT([string]$clientName, [string]$CertDir, [string]$ConfigFi
         New-Item -Path "C:\ERCOT\FO\$folder" -ItemType Directory -Force | Out-Null
     }
 
-    Copy-Item (Join-Path $ConfigFilesDir "clientTruststore.jks") C:\ERCOT\clientTruststore.jks -ErrorAction Stop
+    Copy-Item (Join-Path $ConfigFilesDir "clientTruststore.jks") C:\ERCOT\clientTruststore.jks -Force -ErrorAction Stop
 
-    Copy-Item (Join-Path $ConfigFilesDir "crypto.properties") "C:\PCI-Updates\GM\custom\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
-    Copy-Item (Join-Path $ConfigFilesDir "crypto.properties") "C:\PCI\domain\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties"
-    Copy-Item (Join-Path $ConfigFilesDir "crypto.properties") "C:\PCI\domain\$domainName\crypto.properties"
+    Copy-Item (Join-Path $ConfigFilesDir "crypto.properties") "C:\PCI-Updates\GM\custom\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties" -Force -ErrorAction Stop
+    Copy-Item (Join-Path $ConfigFilesDir "crypto.properties") "C:\PCI\domain\$domainName\applications\GenPortal.ear\APP-INF\classes\crypto.properties" -Force -ErrorAction Stop
+    Copy-Item (Join-Path $ConfigFilesDir "crypto.properties") "C:\PCI\domain\$domainName\crypto.properties" -Force -ErrorAction Stop
 }
 
 # ─────────────────────────────────────────────
@@ -203,7 +214,7 @@ function stageErcotFiles([string]$Environment, [string]$SourceDir, [string]$Labe
 
     # Certs and wsdd files land in the same folder so pairs are easy to spot for
     # troubleshooting; they accumulate here across environment switches by design.
-    Copy-Item -Path "$SourceDir\*" -Destination $destination -Force
+    Copy-Item -Path "$SourceDir\*" -Destination $destination -Force -ErrorAction Stop
     Write-Success "$Label files copied to $destination"
 }
 
@@ -234,7 +245,7 @@ function initFunc_ISONE([string]$clientName, [string]$CertDir, [string]$ConfigFi
         New-Item -Path "C:\ISONE\$folder" -ItemType Directory -Force | Out-Null
     }
 
-    Copy-Item (Join-Path $ConfigFilesDir "PCIKEY.keystore") C:\ISONE\Certificates\PCIKEY.keystore
+    Copy-Item (Join-Path $ConfigFilesDir "PCIKEY.keystore") C:\ISONE\Certificates\PCIKEY.keystore -Force -ErrorAction Stop
     Copy-Item "$CertDir\*" C:\ISONE\Certificates -Recurse -Force
 }
 
@@ -269,7 +280,7 @@ function initFunc_MISO([string]$clientName, [string]$CertDir, [string]$ConfigFil
     New-Item -Path "C:\PCI\settlement" -ItemType Directory -Force | Out-Null
     New-Item -Path "C:\PCI\archive\settlement" -ItemType Directory -Force | Out-Null
 
-    Copy-Item (Join-Path $ConfigFilesDir "miso.jks") C:\MISO\certs\miso.jks
+    Copy-Item (Join-Path $ConfigFilesDir "miso.jks") C:\MISO\certs\miso.jks -Force -ErrorAction Stop
     Copy-Item "$CertDir\*" C:\MISO\certs -Recurse -Force
 }
 
@@ -314,7 +325,7 @@ function initFunc_NYISO([string]$clientName, [string]$CertDir, [string]$ConfigFi
         New-Item -Path "C:\NYISO\$folder" -ItemType Directory -Force | Out-Null
     }
 
-    Copy-Item (Join-Path $ConfigFilesDir "ISONE_NYISO_Keystore.jks") C:\NYISO\Certificates\PCIKEY.keystore -ErrorAction Stop
+    Copy-Item (Join-Path $ConfigFilesDir "ISONE_NYISO_Keystore.jks") C:\NYISO\Certificates\PCIKEY.keystore -Force -ErrorAction Stop
     Copy-Item "$CertDir\*" C:\NYISO\Certificates -Recurse -Force
 }
 
@@ -361,7 +372,7 @@ function initFunc_PJM([string]$clientName, [string]$CertDir, [string]$ConfigFile
         New-Item -Path "C:\PJM\$folder" -ItemType Directory -Force | Out-Null
     }
 
-    Copy-Item (Join-Path $ConfigFilesDir "PCIKEY.keystore") C:\PJM\PCIKEY.keystore
+    Copy-Item (Join-Path $ConfigFilesDir "PCIKEY.keystore") C:\PJM\PCIKEY.keystore -Force -ErrorAction Stop
     Copy-Item "$CertDir\*" C:\PCI\certificates\pki -Recurse -Force
 }
 
@@ -396,7 +407,7 @@ function initFunc_SPPIM([string]$clientName, [string]$CertDir, [string]$ConfigFi
 
     New-Item -Path "C:\iso_messages\archive" -ItemType Directory -Force | Out-Null
 
-    Copy-Item (Join-Path $ConfigFilesDir "sppim_2017.JKS") C:\PCI\certificates\sppim_2017.JKS
+    Copy-Item (Join-Path $ConfigFilesDir "sppim_2017.JKS") C:\PCI\certificates\sppim_2017.JKS -Force -ErrorAction Stop
     Copy-Item "$CertDir\*" C:\PCI\certificates -Recurse -Force
 }
 
@@ -617,13 +628,31 @@ function genericSQL([string]$Market, [string]$Environment, [string]$ConfigFilesD
     }
     $sql = Get-Content -Path $genericSQLPath -Raw
 
-    if ($Environment) {
-        # USE_MODE: 'S' = MOTE/Sandbox, 'M' = Production/MIS (ERCOT only)
+    if ($Market -eq 'ERCOT') {
+        if (-not $Environment) { throw "genericSQL: ERCOT requires an Environment value (MOTE or PROD)" }
+        # USE_MODE: 'S' = MOTE/Sandbox, 'M' = Production/MIS
         $useModeValue = if ($Environment -eq 'PROD') { 'M' } else { 'S' }
         $sql = $sql -replace '("USE_MODE",\s*\r?\n\s*)"S"', "`$1`"$useModeValue`""
     }
+    elseif ($Market -eq 'CAISO') {
+        if (-not $Environment) { throw "genericSQL: CAISO requires an Environment value (N or P)" }
+        # USE_MODE: 'N' = Map Stage, 'P' = Production
+        $pattern = "(VALUE = ')[^']*(' WHERE SYSTEM = 'GenManager' and TYPE = 'CAISO' and NAME = 'USE_MODE')"
+        $sql = $sql -replace $pattern, "`${1}$Environment`${2}"
+    }
 
     return $sql
+}
+
+# CAISO's N/P aren't self-explanatory like ERCOT's MOTE/PROD, so display messages
+# append this label; MOTE/PROD print unlabeled.
+function Get-EnvironmentDisplay([string]$Environment) {
+    switch ($Environment) {
+        'N' { "$Environment (Map Stage)" }
+        'P' { "$Environment (Production)" }
+        'MOTE' { $Environment }
+        'PROD' { $Environment }
+    }
 }
 
 # The client SQL text itself is generated ahead of time, locally, by Start-CloudDomainConfig.ps1

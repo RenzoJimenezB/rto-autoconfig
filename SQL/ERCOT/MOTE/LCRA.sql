@@ -1,8 +1,0 @@
-UPDATE SASSET_OWNER_CONFIG
-SET
-    ACTIVE = 'Y',
-    SETTLE = 'Y',
-    CERTIFICATE = 'pci mote rw qlcra',
-    PASSWORD = 'changeit',
-    CERT_DETAILS = 'C:\ERCOT\FO\Certificates\MOTE\deploy_qlcra.wsdd'
-WHERE ASSET_OWNER_KEY = (SELECT ASSET_OWNER_KEY FROM SASSET_OWNER WHERE NAME = 'QLCRA');

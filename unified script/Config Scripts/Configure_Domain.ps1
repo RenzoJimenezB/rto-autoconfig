@@ -24,9 +24,27 @@ param(
     [Parameter(Mandatory = $true)][string]$CertDir,
     [Parameter(Mandatory = $true)][string]$SqlFilePath,
     [Parameter(Mandatory = $true)][string]$ConfigFilesDir,
-    [Parameter(Mandatory = $false)][ValidateSet('MOTE', 'PROD')][string]$Environment,
+    [Parameter(Mandatory = $false)][ValidateSet('MOTE', 'PROD', 'N', 'P')][string]$Environment,
     [Parameter(Mandatory = $false)][string]$WsddDir
 )
+
+# Without this, a cmdlet error (e.g. Copy-Item/New-Item hitting an unexpected pre-existing
+# file) is non-terminating by default: the script keeps running past it silently, and the
+# only sign of trouble is a generic "remote execution failed" message the launcher reports
+# at the very end, disconnected from whatever step actually failed. Setting this makes every
+# such failure stop immediately, right where it happens, under the Write-Step banner for that
+# stage -- matching what Start-CloudDomainConfig.ps1 (the local launcher) already does.
+$ErrorActionPreference = 'Stop'
+
+# ValidateSet above only checks Environment is in the combined MOTE/PROD/N/P set -- it
+# can't tell MOTE apart from N by market, so ERCOT+N or CAISO+MOTE would pass it. This
+# catches that, and also catches CAISO with no Environment at all ($null -notin @('N','P')).
+if ($Market -eq 'ERCOT' -and $Environment -notin @('MOTE', 'PROD')) {
+    throw "ERCOT requires Environment to be MOTE or PROD (got '$Environment')"
+}
+if ($Market -eq 'CAISO' -and $Environment -notin @('N', 'P')) {
+    throw "CAISO requires Environment to be N or P (got '$Environment')"
+}
 
 function Write-Step {
     param([string]$Message)
@@ -82,7 +100,7 @@ Write-Step 'Script initializing, please wait...'
 
 # Load SQL payloads
 Write-Info "Using client SQL: $Client.sql"
-if ($Market -eq 'ERCOT') {
+if ($Market -eq 'ERCOT' -or $Market -eq 'CAISO') {
     Write-Info "Environment: $Environment"
 }
 $clientSqlBlock = clientSQL $SqlFilePath
@@ -98,9 +116,9 @@ if (-not (Get-Command $marketInitFn -ErrorAction SilentlyContinue)) {
 }
 & $marketInitFn $clientName $CertDir $ConfigFilesDir
 
-# ERCOT-only: stage per-environment certs/wsdd files after the market folders exist
+# ERCOT-only: stage per-environment wsdd files after the market folders exist. Certs
+# aren't transferred -- clientTruststore.jks covers cert usage at runtime.
 if ($Market -eq 'ERCOT') {
-    stageErcotFiles $Environment $CertDir 'cert'
     stageErcotFiles $Environment $WsddDir 'wsdd'
 }
 
@@ -151,6 +169,35 @@ try {
         Write-Success 'Client SQL executed successfully'
     }
     catch { throw "Client SQL failed: $($_.Exception.Message)" }
+
+    # Every market's generic SQL deactivates all asset owners before the client SQL reactivates
+    # only the ones with a cert entry. If the AO flagged DEFAULT_ASSET_OWNER is inactive at this point,
+    # it's because this configuration had no cert for it and ISO Comm tasks that rely on the default AO
+    # will fail until someone sets a different, active AO as default via the AO screen.
+    try {
+        $defaultAoQuery = @"
+SELECT so.NAME
+FROM SASSET_OWNER_CONFIG soc
+INNER JOIN SASSET_OWNER so ON so.ASSET_OWNER_KEY = soc.ASSET_OWNER_KEY
+INNER JOIN SISO_PORTFOLIO_MAPPING spm ON so.ISO_PORTFOLIO_MAPPING_KEY = spm.ISO_PORTFOLIO_MAPPING_KEY
+WHERE spm.NAME = '$Market'
+AND soc.DEFAULT_ASSET_OWNER = 'Y'
+AND soc.ACTIVE = 'N'
+"@
+        $reader = (New-Object Oracle.ManagedDataAccess.Client.OracleCommand($defaultAoQuery, $conn)).ExecuteReader()
+        $inactiveDefaultAo = $null
+        if ($reader.Read()) { $inactiveDefaultAo = $reader.GetString(0) }
+        $reader.Close()
+
+        if ($inactiveDefaultAo) {
+            $envNote = if ($Environment) { " for $(Get-EnvironmentDisplay $Environment)" } else { '' }
+            Write-Info ""
+            Write-Warn "WARNING: Default asset owner '$inactiveDefaultAo' is inactive$envNote!"
+            Write-Warn "No certificate was registered for it, so this configuration left it inactive"
+            Write-Warn "ISO Communication tasks may fail until a different, active AO is set as default"
+        }
+    }
+    catch { Write-Warn "Could not verify default asset owner status: $($_.Exception.Message)" }
 
     Restart-ServiceSafely -ServiceName $gsmsSvc
 }

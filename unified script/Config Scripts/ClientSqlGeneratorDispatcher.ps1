@@ -26,13 +26,13 @@ Get-ChildItem -Path $script:GeneratorsDir -Filter "Generate-*ClientSql.ps1" | Fo
 }
 
 $script:ClientSqlGenerators = @{
-    'CAISO' = { param($WorkbookPath, $Client) New-CaisoClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'ERCOT' = { param($WorkbookPath, $Client) New-ErcotClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'ISONE' = { param($WorkbookPath, $Client) New-IsoneClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'MISO'  = { param($WorkbookPath, $Client) New-MisoClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'NYISO' = { param($WorkbookPath, $Client) New-NyisoClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'PJM'   = { param($WorkbookPath, $Client) New-PjmClientSql -WorkbookPath $WorkbookPath -Client $Client }
-    'SPPIM' = { param($WorkbookPath, $Client) New-SppimClientSql -WorkbookPath $WorkbookPath -Client $Client }
+    'CAISO' = { param($WorkbookPath, $Client, $Environment) New-CaisoClientSql -WorkbookPath $WorkbookPath -Client $Client }
+    'ERCOT' = { param($WorkbookPath, $Client, $Environment) New-ErcotClientSql -WorkbookPath $WorkbookPath -Client $Client -Environment $Environment }
+    'ISONE' = { param($WorkbookPath, $Client, $Environment) New-IsoneClientSql -WorkbookPath $WorkbookPath -Client $Client }
+    'MISO'  = { param($WorkbookPath, $Client, $Environment) New-MisoClientSql -WorkbookPath $WorkbookPath -Client $Client }
+    'NYISO' = { param($WorkbookPath, $Client, $Environment) New-NyisoClientSql -WorkbookPath $WorkbookPath -Client $Client }
+    'PJM'   = { param($WorkbookPath, $Client, $Environment) New-PjmClientSql -WorkbookPath $WorkbookPath -Client $Client }
+    'SPPIM' = { param($WorkbookPath, $Client, $Environment) New-SppimClientSql -WorkbookPath $WorkbookPath -Client $Client }
 }
 
 # Returns the raw generated SQL body (no BEGIN/COMMIT/END wrapper) -- callers write this
@@ -41,7 +41,10 @@ function New-ClientSqlText {
     param(
         [Parameter(Mandatory = $true)][string]$Market,
         [Parameter(Mandatory = $true)][string]$Client,
-        [Parameter(Mandatory = $true)][string]$WorkbookPath
+        [Parameter(Mandatory = $true)][string]$WorkbookPath,
+        # Only ERCOT's generator uses this today (SQL is generated per MOTE/PROD
+        # environment); every other market's scriptblock ignores it.
+        [string]$Environment
     )
 
     if (-not $script:ClientSqlGenerators.ContainsKey($Market)) {
@@ -51,5 +54,5 @@ function New-ClientSqlText {
         throw "Market spreadsheet not found: $WorkbookPath"
     }
 
-    return & $script:ClientSqlGenerators[$Market] $WorkbookPath $Client
+    return & $script:ClientSqlGenerators[$Market] $WorkbookPath $Client $Environment
 }
