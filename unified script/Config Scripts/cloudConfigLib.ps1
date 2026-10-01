@@ -325,7 +325,7 @@ function initFunc_NYISO([string]$clientName, [string]$CertDir, [string]$ConfigFi
         New-Item -Path "C:\NYISO\$folder" -ItemType Directory -Force | Out-Null
     }
 
-    Copy-Item (Join-Path $ConfigFilesDir "ISONE_NYISO_Keystore.jks") C:\NYISO\Certificates\PCIKEY.keystore -Force -ErrorAction Stop
+    Copy-Item (Join-Path $ConfigFilesDir "ISONE_NYISO_Keystore.jks") C:\NYISO\Certificates\ISONE_NYISO_Keystore.jks -Force -ErrorAction Stop
     Copy-Item "$CertDir\*" C:\NYISO\Certificates -Recurse -Force
 }
 

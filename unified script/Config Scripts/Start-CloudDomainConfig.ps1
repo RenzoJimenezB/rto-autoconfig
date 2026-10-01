@@ -24,22 +24,6 @@
     Launcher : \\nas3\Client-Certificates\AutoConfig\Start-CloudDomainConfig.bat
     Author   : Renzo Jimenez
     Created  : 2026-05-25
-    Updated  : 2026-08-20 — unified layout: Config Scripts\ + Config Files\<Market>\,
-                replacing per-market AutoConfig-<MARKET> folders.
-    Updated  : 2026-08-20 — every market is now spreadsheet/generator-driven; the legacy
-                per-client SQL\<Market>\ files are no longer used.
-    Updated  : 2026-08-25 — client-name validation reads the spreadsheet's Asset Owners
-                sheet instead of the old, drift-prone Clients\<Market>.txt.
-    Updated  : 2026-08-29 — promoted to live directly under AutoConfig\; legacy launcher
-                and per-market folders decommissioned.
-    Updated  : 2026-08-20 — client SQL is now generated locally before staging, so only
-                the resulting .sql is shipped to the VM, not the raw spreadsheet.
-    Updated  : 2026-08-20 — replaced ImportExcel with lightweight XlsxReader.ps1
-                (full CAISO generation went from ~85s to ~5s over NAS3).
-    Updated  : 2026-09-01 — added interactive multi-VM support. One shared
-                Invoke-CloudDomainConfigForVm function runs both the app-driven and
-                interactive paths; a -ExitOnFailure switch (app path only) makes a
-                failure call `exit 1` immediately instead of continuing to the next VM.
 #>
 
 # ── Console ───────────────────────────────────────────────────────────────────
@@ -49,8 +33,7 @@ Clear-Host
 
 # QuickEdit Mode pauses all console I/O the moment the window is clicked/dragged,
 # until Enter is pressed -- looks exactly like a hang at any point in a long-running
-# script. Disabling it here removes that per-user/per-machine. No-op if this isn't
-# a real console (redirected output, etc.) -- SetConsoleMode just fails silently.
+# script. Disabling it here.
 try {
     Add-Type -Name Console -Namespace Win32 -MemberDefinition @'
 [DllImport("kernel32.dll")] public static extern IntPtr GetStdHandle(int nStdHandle);
