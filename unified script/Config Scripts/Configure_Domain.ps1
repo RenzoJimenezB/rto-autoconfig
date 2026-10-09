@@ -147,6 +147,9 @@ Write-Step 'Modifying WebLogic config.xml'
 $encrypted_password = wl_encrypt_pw $jdkBinPath "#code4quality"
 wl_config_modify $file $jksFile $encrypted_password
 
+Write-Step 'Setting PCI_GM service memory'
+Set-WlHeapSize $domainName
+
 # Connect to DB and execute SQL
 Write-Step 'Connecting to database'
 try {

@@ -605,6 +605,63 @@ function wl_config_modify($file, $jksFile, $enc_pw) {
 }
 
 # ─────────────────────────────────────────────
+#  PCI_GM service memory (Java heap, service CmdLine)
+# ─────────────────────────────────────────────
+# wlsvcX64.exe reads JVM args from the service's Parameters\CmdLine registry value
+# (default installs ship -Xms2048m -Xmx2048m). Takes effect on the next service restart.
+# Also updates the Installer Agent's own record so its page and future updates match.
+function Set-WlHeapSize([string]$DomainName, [int]$HeapMB = 8192) {
+    $ServiceName = "PCI_GM_$DomainName"
+    $regPath = "HKLM:\SYSTEM\CurrentControlSet\Services\$ServiceName\Parameters"
+    $cmdLine = (Get-ItemProperty $regPath).CmdLine
+    $newCmdLine = $cmdLine
+    foreach ($flag in 'Xms', 'Xmx') {
+        if ($newCmdLine -match "(?<=^|\s)-$flag\S+") {
+            $newCmdLine = $newCmdLine -replace "(?<=^|\s)-$flag\S+", "-$flag${HeapMB}m"
+        }
+        else {
+            $newCmdLine = "-$flag${HeapMB}m $newCmdLine"
+        }
+    }
+
+    if ($newCmdLine -ceq $cmdLine) {
+        Write-Info "$ServiceName Java heap already ${HeapMB} MB"
+    }
+    else {
+        Set-ItemProperty -Path $regPath -Name CmdLine -Value $newCmdLine
+        Write-Success "$ServiceName Java heap set to ${HeapMB} MB (-Xms/-Xmx)"
+    }
+
+    # Agent is stopped during the edit so it can't write its in-memory copy back over the file
+    $agentCfg = "C:\PCI\agent\installs\$DomainName\domain-configuration.json"
+    $agentSvc = Get-Service pci_agent_service -ErrorAction SilentlyContinue
+    if (-not (Test-Path $agentCfg) -or -not $agentSvc) {
+        Write-Warn "Installer Agent config not found -- its Default Memory was not updated"
+        return
+    }
+    $raw = [IO.File]::ReadAllText($agentCfg)
+    if ($raw -notmatch '"memoryInMegabytes"\s*:\s*(\d+)') {
+        Write-Warn "memoryInMegabytes not found in $agentCfg -- Installer Agent not updated"
+        return
+    }
+    if ([int]$Matches[1] -eq $HeapMB) {
+        Write-Info "Installer Agent Default Memory already ${HeapMB} MB"
+        return
+    }
+
+    $wasRunning = $agentSvc.Status -eq 'Running'
+    if ($wasRunning) { Stop-Service $agentSvc.Name -ErrorAction Stop }
+    try {
+        $newRaw = $raw -replace '("memoryInMegabytes"\s*:\s*)\d+', "`${1}$HeapMB"
+        [IO.File]::WriteAllText($agentCfg, $newRaw, (New-Object System.Text.UTF8Encoding($false)))
+    }
+    finally {
+        if ($wasRunning) { Start-Service $agentSvc.Name -ErrorAction Stop }
+    }
+    Write-Success "Installer Agent Default Memory set to ${HeapMB} MB"
+}
+
+# ─────────────────────────────────────────────
 #  SQL Helpers
 # ─────────────────────────────────────────────
 function buildjdbc {
